@@ -1,0 +1,62 @@
+# Vorpal
+
+High-performance, functional collection library for TypeScript with lazy evaluation.
+
+## What It Does
+
+Provides two APIs for array/iterable operations:
+- **Lazy API** (`@authaz/vorpal-ts/lazy`): Chainable, deferred execution until terminal operation
+- **Fn API** (`@authaz/vorpal-ts/fn`): Curried, data-last functions for pipe composition
+
+Key features:
+- Lazy evaluation - only processes elements as needed
+- Operation fusion - consecutive filters/maps combine into single pass
+- Early termination - take/first/find stop processing immediately
+- Zero dependencies
+
+## Usage
+
+```typescript
+// Lazy (chainable)
+import { V } from '@authaz/vorpal-ts/lazy';
+V([1, 2, 3, 4, 5])
+  .filter(x => x % 2 === 0)
+  .map(x => x * 2)
+  .take(2)
+  .toArray(); // [4, 8]
+
+// Fn (pipe composition)
+import { V } from '@authaz/vorpal-ts/fn';
+V.pipe(
+  V.filter((x: number) => x % 2 === 0),
+  V.map((x: number) => x * 2),
+  V.take(2)
+)([1, 2, 3, 4, 5]); // [4, 8]
+```
+
+## Structure
+
+```
+src/
+├── core/       # Shared types (Predicate, Selector) and utilities (range, repeat)
+├── lazy/       # VorpalLazy class with operation fusion
+└── fn/         # Curried functions and pipe/compose
+```
+
+## Commands
+
+```bash
+npm run build       # Compile to ./dist
+npm test            # Run tests
+npm run bench       # Run benchmarks
+```
+
+## Performance
+
+Vorpal excels with:
+- Large arrays (n > 1,000)
+- Early termination (take, first, find)
+- Chained operations (filter+map+filter+take)
+- Aggregations (sum, average, min, max)
+
+For small arrays (n < 100), native methods have less overhead.

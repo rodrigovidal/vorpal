@@ -1121,6 +1121,29 @@ export function reduceRight<T, R>(fn: (acc: R, value: T, index: number) => R, in
   return arr === undefined ? exec : exec(arr);
 }
 
+/**
+ * Cumulative reduce that returns all intermediate values.
+ * @example
+ * ```ts
+ * scan((acc, x) => acc + x, 0)([1, 2, 3, 4]); // [0, 1, 3, 6, 10]
+ * scan((acc, x) => acc + x, 0, [1, 2, 3, 4]); // [0, 1, 3, 6, 10]
+ * ```
+ */
+export function scan<T, R>(fn: (acc: R, value: T, index: number) => R, initial: R): (arr: readonly T[]) => R[];
+export function scan<T, R>(fn: (acc: R, value: T, index: number) => R, initial: R, arr: readonly T[]): R[];
+export function scan<T, R>(fn: (acc: R, value: T, index: number) => R, initial: R, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): R[] => {
+    const result: R[] = [initial];
+    let acc = initial;
+    for (let i = 0; i < arr.length; i++) {
+      acc = fn(acc, arr[i] as T, i);
+      result.push(acc);
+    }
+    return result;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
 // ==================== Grouping Operations ====================
 
 /**
@@ -1217,6 +1240,55 @@ export function partition<T>(predicate: Predicate<T>, arr?: readonly T[]) {
       }
     }
     return [pass, fail];
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Groups by key and aggregates each group.
+ * @example
+ * ```ts
+ * aggregateBy(
+ *   (x: {dept: string, salary: number}) => x.dept,
+ *   () => ({ total: 0, count: 0 }),
+ *   (acc, x) => ({ total: acc.total + x.salary, count: acc.count + 1 })
+ * )([
+ *   {dept: 'eng', salary: 100},
+ *   {dept: 'eng', salary: 150},
+ *   {dept: 'sales', salary: 80}
+ * ]);
+ * // Map { 'eng' => {total: 250, count: 2}, 'sales' => {total: 80, count: 1} }
+ * ```
+ */
+export function aggregateBy<T, K, R>(
+  keyFn: (value: T) => K,
+  seed: () => R,
+  reducer: (acc: R, value: T) => R
+): (arr: readonly T[]) => Map<K, R>;
+export function aggregateBy<T, K, R>(
+  keyFn: (value: T) => K,
+  seed: () => R,
+  reducer: (acc: R, value: T) => R,
+  arr: readonly T[]
+): Map<K, R>;
+export function aggregateBy<T, K, R>(
+  keyFn: (value: T) => K,
+  seed: () => R,
+  reducer: (acc: R, value: T) => R,
+  arr?: readonly T[]
+) {
+  const exec = (arr: readonly T[]): Map<K, R> => {
+    const result = new Map<K, R>();
+    for (let i = 0; i < arr.length; i++) {
+      const item = arr[i] as T;
+      const key = keyFn(item);
+      let acc = result.get(key);
+      if (acc === undefined) {
+        acc = seed();
+      }
+      result.set(key, reducer(acc, item));
+    }
+    return result;
   };
   return arr === undefined ? exec : exec(arr);
 }
@@ -1392,6 +1464,132 @@ export function union<T>(arrOrOther: readonly T[], other?: readonly T[]) {
     }
   }
   return result;
+}
+
+/**
+ * Returns elements from first array not in second, compared by key.
+ * @example
+ * ```ts
+ * differenceBy((x: {id: number}) => x.id)([{id: 3}])([{id: 1}, {id: 2}, {id: 3}]);
+ * // [{id: 1}, {id: 2}]
+ * ```
+ */
+export function differenceBy<T, K>(keyFn: (value: T) => K): (other: readonly T[]) => (arr: readonly T[]) => T[];
+export function differenceBy<T, K>(keyFn: (value: T) => K, other: readonly T[]): (arr: readonly T[]) => T[];
+export function differenceBy<T, K>(keyFn: (value: T) => K, other: readonly T[], arr: readonly T[]): T[];
+export function differenceBy<T, K>(keyFn: (value: T) => K, other?: readonly T[], arr?: readonly T[]) {
+  const impl = (arr: readonly T[], other: readonly T[]): T[] => {
+    const otherKeys = new Set<K>();
+    for (let i = 0; i < other.length; i++) {
+      otherKeys.add(keyFn(other[i] as T));
+    }
+    const result: T[] = [];
+    const seenKeys = new Set<K>();
+    for (let i = 0; i < arr.length; i++) {
+      const item = arr[i] as T;
+      const key = keyFn(item);
+      if (!otherKeys.has(key) && !seenKeys.has(key)) {
+        seenKeys.add(key);
+        result.push(item);
+      }
+    }
+    return result;
+  };
+
+  if (arr !== undefined) {
+    return impl(arr, other!);
+  }
+  if (other !== undefined) {
+    return (arr: readonly T[]) => impl(arr, other);
+  }
+  return (other: readonly T[]) => (arr: readonly T[]) => impl(arr, other);
+}
+
+/**
+ * Alias for differenceBy.
+ */
+export const exceptBy = differenceBy;
+
+/**
+ * Returns elements present in both arrays, compared by key.
+ * @example
+ * ```ts
+ * intersectionBy((x: {id: number}) => x.id)([{id: 2}, {id: 3}])([{id: 1}, {id: 2}, {id: 3}]);
+ * // [{id: 2}, {id: 3}]
+ * ```
+ */
+export function intersectionBy<T, K>(keyFn: (value: T) => K): (other: readonly T[]) => (arr: readonly T[]) => T[];
+export function intersectionBy<T, K>(keyFn: (value: T) => K, other: readonly T[]): (arr: readonly T[]) => T[];
+export function intersectionBy<T, K>(keyFn: (value: T) => K, other: readonly T[], arr: readonly T[]): T[];
+export function intersectionBy<T, K>(keyFn: (value: T) => K, other?: readonly T[], arr?: readonly T[]) {
+  const impl = (arr: readonly T[], other: readonly T[]): T[] => {
+    const otherKeys = new Set<K>();
+    for (let i = 0; i < other.length; i++) {
+      otherKeys.add(keyFn(other[i] as T));
+    }
+    const result: T[] = [];
+    const seenKeys = new Set<K>();
+    for (let i = 0; i < arr.length; i++) {
+      const item = arr[i] as T;
+      const key = keyFn(item);
+      if (otherKeys.has(key) && !seenKeys.has(key)) {
+        seenKeys.add(key);
+        result.push(item);
+      }
+    }
+    return result;
+  };
+
+  if (arr !== undefined) {
+    return impl(arr, other!);
+  }
+  if (other !== undefined) {
+    return (arr: readonly T[]) => impl(arr, other);
+  }
+  return (other: readonly T[]) => (arr: readonly T[]) => impl(arr, other);
+}
+
+/**
+ * Returns unique elements from both arrays, compared by key.
+ * @example
+ * ```ts
+ * unionBy((x: {id: number}) => x.id)([{id: 2}, {id: 3}])([{id: 1}, {id: 2}]);
+ * // [{id: 1}, {id: 2}, {id: 3}]
+ * ```
+ */
+export function unionBy<T, K>(keyFn: (value: T) => K): (other: readonly T[]) => (arr: readonly T[]) => T[];
+export function unionBy<T, K>(keyFn: (value: T) => K, other: readonly T[]): (arr: readonly T[]) => T[];
+export function unionBy<T, K>(keyFn: (value: T) => K, other: readonly T[], arr: readonly T[]): T[];
+export function unionBy<T, K>(keyFn: (value: T) => K, other?: readonly T[], arr?: readonly T[]) {
+  const impl = (arr: readonly T[], other: readonly T[]): T[] => {
+    const seenKeys = new Set<K>();
+    const result: T[] = [];
+    for (let i = 0; i < arr.length; i++) {
+      const item = arr[i] as T;
+      const key = keyFn(item);
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        result.push(item);
+      }
+    }
+    for (let i = 0; i < other.length; i++) {
+      const item = other[i] as T;
+      const key = keyFn(item);
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        result.push(item);
+      }
+    }
+    return result;
+  };
+
+  if (arr !== undefined) {
+    return impl(arr, other!);
+  }
+  if (other !== undefined) {
+    return (arr: readonly T[]) => impl(arr, other);
+  }
+  return (other: readonly T[]) => (arr: readonly T[]) => impl(arr, other);
 }
 
 // ==================== Join Operations ====================
@@ -2009,6 +2207,421 @@ export function antiJoin<T, I, K>(
     }
     return result;
   };
+}
+
+// ==================== Windowing Operations ====================
+
+/**
+ * Returns sliding windows of n consecutive elements with optional step.
+ * @example
+ * ```ts
+ * aperture(3)([1, 2, 3, 4, 5]); // [[1, 2, 3], [2, 3, 4], [3, 4, 5]]
+ * aperture(2, 2)([1, 2, 3, 4, 5]); // [[1, 2], [3, 4]]
+ * ```
+ */
+export function aperture<T>(size: number, step?: number): (arr: readonly T[]) => T[][];
+export function aperture<T>(size: number, step: number, arr: readonly T[]): T[][];
+export function aperture<T>(size: number, stepOrArr?: number | readonly T[], arr?: readonly T[]) {
+  // Direct call: aperture(3, 1, array)
+  if (arr !== undefined) {
+    const step = stepOrArr as number;
+    return apertureImpl(arr as readonly T[], size, step);
+  }
+
+  // Direct call with just step as array: aperture(3, array) - but step defaults to 1
+  if (Array.isArray(stepOrArr)) {
+    return apertureImpl(stepOrArr as readonly T[], size, 1);
+  }
+
+  // Curried: aperture(3) or aperture(3, 2)
+  const step = (stepOrArr as number | undefined) ?? 1;
+  return (arr: readonly T[]): T[][] => apertureImpl(arr, size, step);
+}
+
+function apertureImpl<T>(arr: readonly T[], size: number, step: number): T[][] {
+  if (size <= 0 || step <= 0 || arr.length < size) return [];
+
+  const result: T[][] = [];
+  for (let i = 0; i <= arr.length - size; i += step) {
+    result.push(arr.slice(i, i + size) as T[]);
+  }
+  return result;
+}
+
+/**
+ * Alias for aperture. Returns sliding windows.
+ */
+export function slidingWindow<T>(size: number, step?: number): (arr: readonly T[]) => T[][];
+export function slidingWindow<T>(size: number, step: number, arr: readonly T[]): T[][];
+export function slidingWindow<T>(size: number, stepOrArr?: number | readonly T[], arr?: readonly T[]): T[][] | ((arr: readonly T[]) => T[][]) {
+  // Direct call: slidingWindow(size, step, arr)
+  if (arr !== undefined) {
+    return apertureImpl(arr, size, stepOrArr as number);
+  }
+
+  // Curried: slidingWindow(size) or slidingWindow(size, step)
+  const step = (stepOrArr as number | undefined) ?? 1;
+  return (arr: readonly T[]): T[][] => apertureImpl(arr, size, step);
+}
+
+/**
+ * Returns consecutive pairs of elements.
+ * @example
+ * ```ts
+ * pairwise([1, 2, 3, 4]); // [[1, 2], [2, 3], [3, 4]]
+ * ```
+ */
+export function pairwise<T>(arr: readonly T[]): [T, T][] {
+  const len = arr.length;
+  if (len < 2) return [];
+
+  const result: [T, T][] = new Array(len - 1);
+  for (let i = 0; i < len - 1; i++) {
+    result[i] = [arr[i]!, arr[i + 1]!];
+  }
+  return result;
+}
+
+// ==================== Comparison Operations ====================
+
+/**
+ * Checks if two sequences are equal element by element.
+ * @example
+ * ```ts
+ * sequenceEqual([1, 2, 3], [1, 2, 3]); // true
+ * sequenceEqual([1, 2], [1, 2, 3]); // false
+ * ```
+ */
+export function sequenceEqual<T>(other: readonly T[], comparer?: (a: T, b: T) => boolean): (arr: readonly T[]) => boolean;
+export function sequenceEqual<T>(arr: readonly T[], other: readonly T[], comparer?: (a: T, b: T) => boolean): boolean;
+export function sequenceEqual<T>(
+  arrOrOther: readonly T[],
+  otherOrComparer?: readonly T[] | ((a: T, b: T) => boolean),
+  comparer?: (a: T, b: T) => boolean
+) {
+  // Direct call: sequenceEqual(arr, other) or sequenceEqual(arr, other, comparer)
+  if (Array.isArray(otherOrComparer)) {
+    const arr = arrOrOther;
+    const other = otherOrComparer as readonly T[];
+    const cmp = comparer ?? ((a: T, b: T) => a === b);
+    return sequenceEqualImpl(arr, other, cmp);
+  }
+
+  // Curried: sequenceEqual(other) or sequenceEqual(other, comparer)
+  const other = arrOrOther;
+  const cmp = (otherOrComparer as ((a: T, b: T) => boolean) | undefined) ?? ((a: T, b: T) => a === b);
+  return (arr: readonly T[]): boolean => sequenceEqualImpl(arr, other, cmp);
+}
+
+function sequenceEqualImpl<T>(arr: readonly T[], other: readonly T[], comparer: (a: T, b: T) => boolean): boolean {
+  if (arr.length !== other.length) return false;
+  for (let i = 0; i < arr.length; i++) {
+    if (!comparer(arr[i]!, other[i]!)) return false;
+  }
+  return true;
+}
+
+/**
+ * Checks if the sequence starts with the given prefix.
+ * @example
+ * ```ts
+ * startsWith([1, 2])([1, 2, 3, 4]); // true
+ * startsWith([1, 2], [1, 2, 3, 4]); // true
+ * ```
+ */
+export function startsWith<T>(prefix: readonly T[], comparer?: (a: T, b: T) => boolean): (arr: readonly T[]) => boolean;
+export function startsWith<T>(arr: readonly T[], prefix: readonly T[], comparer?: (a: T, b: T) => boolean): boolean;
+export function startsWith<T>(
+  arrOrPrefix: readonly T[],
+  prefixOrComparer?: readonly T[] | ((a: T, b: T) => boolean),
+  comparer?: (a: T, b: T) => boolean
+) {
+  // Direct call: startsWith(arr, prefix) or startsWith(arr, prefix, comparer)
+  if (Array.isArray(prefixOrComparer)) {
+    const arr = arrOrPrefix;
+    const prefix = prefixOrComparer as readonly T[];
+    const cmp = comparer ?? ((a: T, b: T) => a === b);
+    return startsWithImpl(arr, prefix, cmp);
+  }
+
+  // Curried: startsWith(prefix) or startsWith(prefix, comparer)
+  const prefix = arrOrPrefix;
+  const cmp = (prefixOrComparer as ((a: T, b: T) => boolean) | undefined) ?? ((a: T, b: T) => a === b);
+  return (arr: readonly T[]): boolean => startsWithImpl(arr, prefix, cmp);
+}
+
+function startsWithImpl<T>(arr: readonly T[], prefix: readonly T[], comparer: (a: T, b: T) => boolean): boolean {
+  if (prefix.length > arr.length) return false;
+  for (let i = 0; i < prefix.length; i++) {
+    if (!comparer(arr[i]!, prefix[i]!)) return false;
+  }
+  return true;
+}
+
+/**
+ * Checks if the sequence ends with the given suffix.
+ * @example
+ * ```ts
+ * endsWith([3, 4])([1, 2, 3, 4]); // true
+ * endsWith([1, 2, 3, 4], [3, 4]); // true
+ * ```
+ */
+export function endsWith<T>(suffix: readonly T[], comparer?: (a: T, b: T) => boolean): (arr: readonly T[]) => boolean;
+export function endsWith<T>(arr: readonly T[], suffix: readonly T[], comparer?: (a: T, b: T) => boolean): boolean;
+export function endsWith<T>(
+  arrOrSuffix: readonly T[],
+  suffixOrComparer?: readonly T[] | ((a: T, b: T) => boolean),
+  comparer?: (a: T, b: T) => boolean
+) {
+  // Direct call: endsWith(arr, suffix) or endsWith(arr, suffix, comparer)
+  if (Array.isArray(suffixOrComparer)) {
+    const arr = arrOrSuffix;
+    const suffix = suffixOrComparer as readonly T[];
+    const cmp = comparer ?? ((a: T, b: T) => a === b);
+    return endsWithImpl(arr, suffix, cmp);
+  }
+
+  // Curried: endsWith(suffix) or endsWith(suffix, comparer)
+  const suffix = arrOrSuffix;
+  const cmp = (suffixOrComparer as ((a: T, b: T) => boolean) | undefined) ?? ((a: T, b: T) => a === b);
+  return (arr: readonly T[]): boolean => endsWithImpl(arr, suffix, cmp);
+}
+
+function endsWithImpl<T>(arr: readonly T[], suffix: readonly T[], comparer: (a: T, b: T) => boolean): boolean {
+  if (suffix.length > arr.length) return false;
+  const startIndex = arr.length - suffix.length;
+  for (let i = 0; i < suffix.length; i++) {
+    if (!comparer(arr[startIndex + i]!, suffix[i]!)) return false;
+  }
+  return true;
+}
+
+// ==================== Combinatorial Operations ====================
+
+/**
+ * Returns all permutations of the array.
+ * Warning: O(n!) complexity - use only for small arrays.
+ * @example
+ * ```ts
+ * permutations([1, 2, 3]);
+ * // [[1,2,3], [2,1,3], [3,1,2], [1,3,2], [2,3,1], [3,2,1]]
+ * ```
+ */
+export function permutations<T>(arr: readonly T[]): T[][] {
+  const result: T[][] = [];
+  const items = arr.slice() as T[];
+  const len = items.length;
+
+  if (len === 0) return [[]];
+  if (len === 1) return [[items[0]!]];
+
+  // Heap's algorithm
+  const c = new Array<number>(len).fill(0);
+  result.push(items.slice());
+
+  let i = 0;
+  while (i < len) {
+    if (c[i]! < i) {
+      if (i % 2 === 0) {
+        [items[0], items[i]] = [items[i]!, items[0]!];
+      } else {
+        [items[c[i]!], items[i]] = [items[i]!, items[c[i]!]!];
+      }
+      result.push(items.slice());
+      c[i]!++;
+      i = 0;
+    } else {
+      c[i] = 0;
+      i++;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Returns all k-combinations of the array.
+ * @example
+ * ```ts
+ * combinations(2)([1, 2, 3]); // [[1, 2], [1, 3], [2, 3]]
+ * combinations(2, [1, 2, 3]); // [[1, 2], [1, 3], [2, 3]]
+ * ```
+ */
+export function combinations<T>(k: number): (arr: readonly T[]) => T[][];
+export function combinations<T>(k: number, arr: readonly T[]): T[][];
+export function combinations<T>(k: number, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[][] => {
+    const result: T[][] = [];
+    const len = arr.length;
+
+    if (k === 0) return [[]];
+    if (k > len) return [];
+    if (k === len) return [arr.slice() as T[]];
+
+    const indices = Array.from({ length: k }, (_, i) => i);
+
+    while (true) {
+      result.push(indices.map(i => arr[i]!));
+
+      let i = k - 1;
+      while (i >= 0 && indices[i] === len - k + i) {
+        i--;
+      }
+
+      if (i < 0) break;
+
+      indices[i]!++;
+      for (let j = i + 1; j < k; j++) {
+        indices[j] = indices[j - 1]! + 1;
+      }
+    }
+
+    return result;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+// ==================== Randomization Operations ====================
+
+/**
+ * Returns a new array with elements in random order.
+ * Uses Fisher-Yates shuffle algorithm.
+ * @example
+ * ```ts
+ * shuffle([1, 2, 3, 4, 5]); // e.g., [3, 1, 5, 2, 4]
+ * ```
+ */
+export function shuffle<T>(arr: readonly T[]): T[] {
+  const result = arr.slice() as T[];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j]!, result[i]!];
+  }
+  return result;
+}
+
+/**
+ * Returns n random elements from the array.
+ * @example
+ * ```ts
+ * sample(3)([1, 2, 3, 4, 5]); // e.g., [2, 5, 1]
+ * sample(3, [1, 2, 3, 4, 5]); // e.g., [4, 1, 3]
+ * ```
+ */
+export function sample<T>(n: number): (arr: readonly T[]) => T[];
+export function sample<T>(n: number, arr: readonly T[]): T[];
+export function sample<T>(n: number, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    if (n <= 0) return [];
+    if (n >= arr.length) return shuffle(arr);
+
+    const result: T[] = [];
+    const indices = new Set<number>();
+    while (result.length < n) {
+      const idx = Math.floor(Math.random() * arr.length);
+      if (!indices.has(idx)) {
+        indices.add(idx);
+        result.push(arr[idx]!);
+      }
+    }
+    return result;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Returns a single random element from the array.
+ * @example
+ * ```ts
+ * randomElement([1, 2, 3, 4, 5]); // e.g., 3
+ * ```
+ */
+export function randomElement<T>(arr: readonly T[]): T | undefined {
+  if (arr.length === 0) return undefined;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// ==================== Search Operations ====================
+
+/**
+ * Binary search on a sorted array.
+ * @returns The index of the element, or -1 if not found
+ * @example
+ * ```ts
+ * binarySearch(3)([1, 2, 3, 4, 5]); // 2
+ * binarySearch(6, [1, 2, 3, 4, 5]); // -1
+ * ```
+ */
+export function binarySearch<T>(value: T, compareFn?: (a: T, b: T) => number): (arr: readonly T[]) => number;
+export function binarySearch<T>(value: T, compareFn: ((a: T, b: T) => number) | undefined, arr: readonly T[]): number;
+export function binarySearch<T>(value: T, compareFnOrArr?: ((a: T, b: T) => number) | readonly T[], arr?: readonly T[]) {
+  const exec = (arr: readonly T[], compareFn?: (a: T, b: T) => number): number => {
+    const cmp = compareFn ?? ((a: T, b: T) => (a < b ? -1 : a > b ? 1 : 0));
+    let left = 0;
+    let right = arr.length - 1;
+
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2);
+      const comparison = cmp(arr[mid]!, value);
+
+      if (comparison === 0) return mid;
+      if (comparison < 0) {
+        left = mid + 1;
+      } else {
+        right = mid - 1;
+      }
+    }
+
+    return -1;
+  };
+
+  // Direct call: binarySearch(value, compareFn, arr)
+  if (arr !== undefined) {
+    return exec(arr, compareFnOrArr as (a: T, b: T) => number);
+  }
+
+  // Curried: binarySearch(value) or binarySearch(value, compareFn)
+  const compareFn = typeof compareFnOrArr === 'function' ? compareFnOrArr : undefined;
+  return (arr: readonly T[]) => exec(arr, compareFn);
+}
+
+/**
+ * Binary search that returns the insertion point.
+ * @returns The index where the element should be inserted to maintain sorted order
+ * @example
+ * ```ts
+ * binarySearchIndex(3)([1, 2, 4, 5]); // 2
+ * binarySearchIndex(3, [1, 2, 3, 4, 5]); // 2
+ * ```
+ */
+export function binarySearchIndex<T>(value: T, compareFn?: (a: T, b: T) => number): (arr: readonly T[]) => number;
+export function binarySearchIndex<T>(value: T, compareFn: ((a: T, b: T) => number) | undefined, arr: readonly T[]): number;
+export function binarySearchIndex<T>(value: T, compareFnOrArr?: ((a: T, b: T) => number) | readonly T[], arr?: readonly T[]) {
+  const exec = (arr: readonly T[], compareFn?: (a: T, b: T) => number): number => {
+    const cmp = compareFn ?? ((a: T, b: T) => (a < b ? -1 : a > b ? 1 : 0));
+    let left = 0;
+    let right = arr.length;
+
+    while (left < right) {
+      const mid = Math.floor((left + right) / 2);
+      if (cmp(arr[mid]!, value) < 0) {
+        left = mid + 1;
+      } else {
+        right = mid;
+      }
+    }
+
+    return left;
+  };
+
+  // Direct call: binarySearchIndex(value, compareFn, arr)
+  if (arr !== undefined) {
+    return exec(arr, compareFnOrArr as (a: T, b: T) => number);
+  }
+
+  // Curried: binarySearchIndex(value) or binarySearchIndex(value, compareFn)
+  const compareFn = typeof compareFnOrArr === 'function' ? compareFnOrArr : undefined;
+  return (arr: readonly T[]) => exec(arr, compareFn);
 }
 
 // ==================== Sorting Operations ====================

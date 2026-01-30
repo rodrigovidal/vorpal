@@ -79,18 +79,24 @@ export const V = {
   maxBy: fns.maxBy,
   reduce: fns.reduce,
   reduceRight: fns.reduceRight,
+  scan: fns.scan,
 
   // Grouping
   groupBy: fns.groupBy,
   groupByMap: fns.groupByMap,
   keyBy: fns.keyBy,
   partition: fns.partition,
+  aggregateBy: fns.aggregateBy,
 
   // Set Operations
   distinct: fns.distinct,
   difference: fns.difference,
   intersection: fns.intersection,
   union: fns.union,
+  differenceBy: fns.differenceBy,
+  exceptBy: fns.exceptBy,
+  intersectionBy: fns.intersectionBy,
+  unionBy: fns.unionBy,
 
   // Join Operations
   innerJoin: fns.innerJoin,
@@ -101,6 +107,29 @@ export const V = {
   groupJoin: fns.groupJoin,
   semiJoin: fns.semiJoin,
   antiJoin: fns.antiJoin,
+
+  // Windowing Operations
+  aperture: fns.aperture,
+  slidingWindow: fns.slidingWindow,
+  pairwise: fns.pairwise,
+
+  // Comparison Operations
+  sequenceEqual: fns.sequenceEqual,
+  startsWith: fns.startsWith,
+  endsWith: fns.endsWith,
+
+  // Combinatorial Operations
+  permutations: fns.permutations,
+  combinations: fns.combinations,
+
+  // Randomization Operations
+  shuffle: fns.shuffle,
+  sample: fns.sample,
+  randomElement: fns.randomElement,
+
+  // Search Operations
+  binarySearch: fns.binarySearch,
+  binarySearchIndex: fns.binarySearchIndex,
 
   // Sorting
   sortBy: fns.sortBy,
@@ -190,18 +219,24 @@ export {
   maxBy,
   reduce,
   reduceRight,
+  scan,
 
   // Grouping
   groupBy,
   groupByMap,
   keyBy,
   partition,
+  aggregateBy,
 
   // Set Operations
   distinct,
   difference,
   intersection,
   union,
+  differenceBy,
+  exceptBy,
+  intersectionBy,
+  unionBy,
 
   // Join Operations
   innerJoin,
@@ -212,6 +247,29 @@ export {
   groupJoin,
   semiJoin,
   antiJoin,
+
+  // Windowing Operations
+  aperture,
+  slidingWindow,
+  pairwise,
+
+  // Comparison Operations
+  sequenceEqual,
+  startsWith,
+  endsWith,
+
+  // Combinatorial Operations
+  permutations,
+  combinations,
+
+  // Randomization Operations
+  shuffle,
+  sample,
+  randomElement,
+
+  // Search Operations
+  binarySearch,
+  binarySearchIndex,
 
   // Sorting
   sortBy,

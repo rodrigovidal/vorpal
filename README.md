@@ -209,6 +209,11 @@ V(array)
   .reverse()
   .sortBy(selector)
   .sortByDescending(selector)
+  // Set operations with key selector
+  .unionBy(other, keySelector)
+  .intersectBy(other, keySelector)
+  .differenceBy(other, keySelector)
+  .exceptBy(other, keySelector)  // Alias for differenceBy
   // Join operations
   .innerJoin(other, outerKey, innerKey, resultSelector)
   .leftJoin(other, outerKey, innerKey, resultSelector)
@@ -218,6 +223,14 @@ V(array)
   .groupJoin(other, outerKey, innerKey, resultSelector)
   .semiJoin(other, outerKey, innerKey)
   .antiJoin(other, outerKey, innerKey)
+  // Windowing operations
+  .aperture(size, step?)    // Sliding windows with optional step
+  .slidingWindow(size, step?)  // Alias for aperture
+  .pairwise()               // Consecutive pairs [[1,2], [2,3], ...]
+  // Comparison operations
+  .sequenceEqual(other, comparer?)  // Check if sequences match
+  .startsWith(prefix, comparer?)    // Check if starts with prefix
+  .endsWith(suffix, comparer?)      // Check if ends with suffix
   // Terminal operations
   .first() / .firstOr(default)
   .last() / .lastOr(default)
@@ -228,6 +241,18 @@ V(array)
   .count()
   .sum() / .average() / .min() / .max()
   .reduce(reducer, initial)
+  .scan(reducer, initial)     // Cumulative reduce, returns all intermediate values
+  .aggregateBy(keyFn, seed, reducer)  // Group and aggregate in one pass
+  // Combinatorial operations
+  .permutations()             // All permutations (O(n!))
+  .combinations(k)            // All k-combinations
+  // Randomization
+  .shuffle()                  // Random order
+  .sample(n)                  // n random elements
+  .random()                   // Single random element
+  // Search
+  .binarySearch(value, compareFn?)      // Binary search (-1 if not found)
+  .binarySearchIndex(value, compareFn?) // Insertion point
   .toArray()
   .toMap(keySelector, valueSelector)
   .toSet()
@@ -250,6 +275,39 @@ V.innerJoin(outer, inner, outerKey, innerKey, resultSelector)
 V.leftJoin(outer, inner, outerKey, innerKey, resultSelector)
 V.semiJoin(outer, inner, outerKey, innerKey)
 V.antiJoin(outer, inner, outerKey, innerKey)
+
+// Windowing operations
+V.aperture(size, step?)(array)    // Sliding windows
+V.slidingWindow(size, step?)(array)  // Alias for aperture
+V.pairwise(array)                 // Consecutive pairs
+
+// Comparison operations
+V.sequenceEqual(other, comparer?)(array)  // Check if sequences match
+V.startsWith(prefix, comparer?)(array)    // Check if starts with prefix
+V.endsWith(suffix, comparer?)(array)      // Check if ends with suffix
+
+// Set operations with key selector
+V.unionBy(keyFn)(other)(array)
+V.intersectionBy(keyFn)(other)(array)
+V.differenceBy(keyFn)(other)(array)
+V.exceptBy(keyFn)(other)(array)  // Alias for differenceBy
+
+// Aggregation
+V.scan(reducer, initial)(array)           // Cumulative reduce
+V.aggregateBy(keyFn, seed, reducer)(array)  // Group and aggregate
+
+// Combinatorial
+V.permutations(array)         // All permutations
+V.combinations(k)(array)      // All k-combinations
+
+// Randomization
+V.shuffle(array)              // Random order
+V.sample(n)(array)            // n random elements
+V.randomElement(array)        // Single random element
+
+// Search
+V.binarySearch(value)(array)       // Binary search
+V.binarySearchIndex(value)(array)  // Insertion point
 
 // Curried (data-last)
 V.filter(predicate)(array)

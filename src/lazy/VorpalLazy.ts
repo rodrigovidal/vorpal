@@ -856,6 +856,34 @@ export class VorpalLazy<T> implements Iterable<T> {
   }
 
   /**
+   * Returns distinct elements from both sequences, compared by key.
+   */
+  unionBy<K>(other: Iterable<T>, keySelector: KeySelector<T, K>): VorpalLazy<T> {
+    return new VorpalLazy(unionByIterator(this, other, keySelector), []);
+  }
+
+  /**
+   * Returns elements present in both sequences, compared by key.
+   */
+  intersectBy<K>(other: Iterable<T>, keySelector: KeySelector<T, K>): VorpalLazy<T> {
+    return new VorpalLazy(intersectByIterator(this, other, keySelector), []);
+  }
+
+  /**
+   * Returns elements in first sequence but not in second, compared by key.
+   */
+  differenceBy<K>(other: Iterable<T>, keySelector: KeySelector<T, K>): VorpalLazy<T> {
+    return new VorpalLazy(differenceByIterator(this, other, keySelector), []);
+  }
+
+  /**
+   * Alias for differenceBy.
+   */
+  exceptBy<K>(other: Iterable<T>, keySelector: KeySelector<T, K>): VorpalLazy<T> {
+    return this.differenceBy(other, keySelector);
+  }
+
+  /**
    * Correlates elements based on matching keys (inner join).
    * Only returns results where keys exist in both sequences.
    * @deprecated Use innerJoin instead
@@ -1162,6 +1190,36 @@ export class VorpalLazy<T> implements Iterable<T> {
       acc = func(acc, item, index++);
     }
     return acc;
+  }
+
+  /**
+   * Groups by key and aggregates each group.
+   * @example
+   * ```ts
+   * V(employees)
+   *   .aggregateBy(
+   *     e => e.dept,
+   *     () => ({ total: 0, count: 0 }),
+   *     (acc, e) => ({ total: acc.total + e.salary, count: acc.count + 1 })
+   *   );
+   * // Map { 'eng' => {total: 250, count: 2}, 'sales' => {total: 80, count: 1} }
+   * ```
+   */
+  aggregateBy<K, R>(
+    keySelector: KeySelector<T, K>,
+    seed: () => R,
+    reducer: (acc: R, value: T) => R
+  ): Map<K, R> {
+    const result = new Map<K, R>();
+    for (const item of this) {
+      const key = keySelector(item);
+      let acc = result.get(key);
+      if (acc === undefined) {
+        acc = seed();
+      }
+      result.set(key, reducer(acc, item));
+    }
+    return result;
   }
 
   /**
@@ -1850,10 +1908,84 @@ export class VorpalLazy<T> implements Iterable<T> {
 
   /**
    * Returns sliding windows of n consecutive elements.
+   * @param size - The window size
+   * @param step - The step between windows (default 1)
    */
-  aperture(size: number): VorpalLazy<T[]> {
-    if (size <= 0) return new VorpalLazy<T[]>([], []);
-    return new VorpalLazy(apertureIterator(this, size), []);
+  aperture(size: number, step: number = 1): VorpalLazy<T[]> {
+    if (size <= 0 || step <= 0) return new VorpalLazy<T[]>([], []);
+    return new VorpalLazy(apertureIterator(this, size, step), []);
+  }
+
+  /**
+   * Alias for aperture. Returns sliding windows of n consecutive elements.
+   * @param size - The window size
+   * @param step - The step between windows (default 1)
+   */
+  slidingWindow(size: number, step: number = 1): VorpalLazy<T[]> {
+    return this.aperture(size, step);
+  }
+
+  /**
+   * Returns consecutive pairs of elements.
+   * Equivalent to aperture(2).
+   */
+  pairwise(): VorpalLazy<[T, T]> {
+    return new VorpalLazy(pairwiseIterator(this), []);
+  }
+
+  /**
+   * Checks if this sequence equals another sequence element by element.
+   * @param other - The sequence to compare with
+   * @param comparer - Optional equality function (default: strict equality)
+   */
+  sequenceEqual(other: Iterable<T>, comparer: (a: T, b: T) => boolean = (a, b) => a === b): boolean {
+    const iter1 = this[Symbol.iterator]();
+    const iter2 = other[Symbol.iterator]();
+
+    while (true) {
+      const r1 = iter1.next();
+      const r2 = iter2.next();
+
+      if (r1.done && r2.done) return true;
+      if (r1.done !== r2.done) return false;
+      if (!comparer(r1.value, r2.value)) return false;
+    }
+  }
+
+  /**
+   * Checks if this sequence starts with the given prefix.
+   * @param prefix - The prefix sequence to check
+   * @param comparer - Optional equality function (default: strict equality)
+   */
+  startsWith(prefix: Iterable<T>, comparer: (a: T, b: T) => boolean = (a, b) => a === b): boolean {
+    const iter = this[Symbol.iterator]();
+
+    for (const prefixItem of prefix) {
+      const result = iter.next();
+      if (result.done) return false;
+      if (!comparer(result.value, prefixItem)) return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Checks if this sequence ends with the given suffix.
+   * @param suffix - The suffix sequence to check
+   * @param comparer - Optional equality function (default: strict equality)
+   */
+  endsWith(suffix: Iterable<T>, comparer: (a: T, b: T) => boolean = (a, b) => a === b): boolean {
+    const items = this.toArray();
+    const suffixArr = [...suffix];
+
+    if (suffixArr.length > items.length) return false;
+
+    const startIndex = items.length - suffixArr.length;
+    for (let i = 0; i < suffixArr.length; i++) {
+      if (!comparer(items[startIndex + i]!, suffixArr[i]!)) return false;
+    }
+
+    return true;
   }
 
   /**
@@ -1991,6 +2123,134 @@ export class VorpalLazy<T> implements Iterable<T> {
    */
   toObject<V>(): Record<string, V> {
     return this.fromPairs<V>();
+  }
+
+  // ==================== Combinatorial Operations ====================
+
+  /**
+   * Returns all permutations of the sequence.
+   * Warning: O(n!) complexity - use only for small sequences.
+   * @example
+   * V([1, 2, 3]).permutations().toArray();
+   * // [[1,2,3], [1,3,2], [2,1,3], [2,3,1], [3,1,2], [3,2,1]]
+   */
+  permutations(): VorpalLazy<T[]> {
+    return new VorpalLazy(permutationsIterator(this.toArray()), []);
+  }
+
+  /**
+   * Returns all k-combinations of the sequence.
+   * @param k - The size of each combination
+   * @example
+   * V([1, 2, 3]).combinations(2).toArray();
+   * // [[1, 2], [1, 3], [2, 3]]
+   */
+  combinations(k: number): VorpalLazy<T[]> {
+    if (k < 0) return new VorpalLazy<T[]>([], []);
+    return new VorpalLazy(combinationsIterator(this.toArray(), k), []);
+  }
+
+  // ==================== Randomization Operations ====================
+
+  /**
+   * Returns a new sequence with elements in random order.
+   * Uses Fisher-Yates shuffle algorithm.
+   */
+  shuffle(): VorpalLazy<T> {
+    const arr = this.toArray();
+    // Fisher-Yates shuffle
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+    }
+    return new VorpalLazy(arr, []);
+  }
+
+  /**
+   * Returns n random elements from the sequence.
+   * @param n - Number of elements to sample
+   */
+  sample(n: number): VorpalLazy<T> {
+    if (n <= 0) return new VorpalLazy<T>([], []);
+    const arr = this.toArray();
+    if (n >= arr.length) return this.shuffle();
+
+    // Partial Fisher-Yates for sampling
+    const result: T[] = [];
+    const indices = new Set<number>();
+    while (result.length < n && result.length < arr.length) {
+      const idx = Math.floor(Math.random() * arr.length);
+      if (!indices.has(idx)) {
+        indices.add(idx);
+        result.push(arr[idx]!);
+      }
+    }
+    return new VorpalLazy(result, []);
+  }
+
+  /**
+   * Returns a single random element from the sequence.
+   * @returns A random element or undefined if sequence is empty
+   */
+  random(): T | undefined {
+    const arr = this.toArray();
+    if (arr.length === 0) return undefined;
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  // ==================== Search Operations ====================
+
+  /**
+   * Binary search on a sorted sequence.
+   * @param value - The value to search for
+   * @param compareFn - Optional comparison function (default: numeric/string comparison)
+   * @returns The index of the element, or -1 if not found
+   */
+  binarySearch(value: T, compareFn?: (a: T, b: T) => number): number {
+    const arr = this.toArray();
+    const cmp = compareFn ?? ((a: T, b: T) => (a < b ? -1 : a > b ? 1 : 0));
+
+    let left = 0;
+    let right = arr.length - 1;
+
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2);
+      const comparison = cmp(arr[mid]!, value);
+
+      if (comparison === 0) return mid;
+      if (comparison < 0) {
+        left = mid + 1;
+      } else {
+        right = mid - 1;
+      }
+    }
+
+    return -1;
+  }
+
+  /**
+   * Binary search that returns the insertion point.
+   * @param value - The value to search for
+   * @param compareFn - Optional comparison function
+   * @returns The index where the element should be inserted to maintain sorted order
+   */
+  binarySearchIndex(value: T, compareFn?: (a: T, b: T) => number): number {
+    const arr = this.toArray();
+    const cmp = compareFn ?? ((a: T, b: T) => (a < b ? -1 : a > b ? 1 : 0));
+
+    let left = 0;
+    let right = arr.length;
+
+    while (left < right) {
+      const mid = Math.floor((left + right) / 2);
+      if (cmp(arr[mid]!, value) < 0) {
+        left = mid + 1;
+      } else {
+        right = mid;
+      }
+    }
+
+    return left;
   }
 }
 
@@ -2342,6 +2602,54 @@ function* differenceIterator<T>(first: Iterable<T>, second: Iterable<T>, _compar
   }
 }
 
+function* unionByIterator<T, K>(first: Iterable<T>, second: Iterable<T>, keySelector: KeySelector<T, K>): Generator<T> {
+  const seenKeys = new Set<K>();
+  for (const item of first) {
+    const key = keySelector(item);
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      yield item;
+    }
+  }
+  for (const item of second) {
+    const key = keySelector(item);
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      yield item;
+    }
+  }
+}
+
+function* intersectByIterator<T, K>(first: Iterable<T>, second: Iterable<T>, keySelector: KeySelector<T, K>): Generator<T> {
+  const secondKeys = new Set<K>();
+  for (const item of second) {
+    secondKeys.add(keySelector(item));
+  }
+  const seenKeys = new Set<K>();
+  for (const item of first) {
+    const key = keySelector(item);
+    if (secondKeys.has(key) && !seenKeys.has(key)) {
+      seenKeys.add(key);
+      yield item;
+    }
+  }
+}
+
+function* differenceByIterator<T, K>(first: Iterable<T>, second: Iterable<T>, keySelector: KeySelector<T, K>): Generator<T> {
+  const secondKeys = new Set<K>();
+  for (const item of second) {
+    secondKeys.add(keySelector(item));
+  }
+  const seenKeys = new Set<K>();
+  for (const item of first) {
+    const key = keySelector(item);
+    if (!secondKeys.has(key) && !seenKeys.has(key)) {
+      seenKeys.add(key);
+      yield item;
+    }
+  }
+}
+
 // ==================== Join Iterator Functions ====================
 
 /**
@@ -2610,14 +2918,40 @@ function* flattenIterator<T>(source: Iterable<T>): Generator<unknown> {
   }
 }
 
-function* apertureIterator<T>(source: Iterable<T>, size: number): Generator<T[]> {
+function* apertureIterator<T>(source: Iterable<T>, size: number, step: number = 1): Generator<T[]> {
   const buffer: T[] = [];
+  let skipCount = 0;
+
   for (const item of source) {
     buffer.push(item);
+
     if (buffer.length === size) {
       yield [...buffer];
-      buffer.shift();
+      // Remove 'step' elements from the front
+      for (let i = 0; i < step && buffer.length > 0; i++) {
+        buffer.shift();
+      }
+      // If step > size, we need to skip some elements
+      if (step > size) {
+        skipCount = step - size;
+      }
+    } else if (skipCount > 0) {
+      buffer.pop(); // Remove the item we just added
+      skipCount--;
     }
+  }
+}
+
+function* pairwiseIterator<T>(source: Iterable<T>): Generator<[T, T]> {
+  let prev: T | undefined;
+  let hasPrev = false;
+
+  for (const item of source) {
+    if (hasPrev) {
+      yield [prev!, item];
+    }
+    prev = item;
+    hasPrev = true;
   }
 }
 
@@ -2707,3 +3041,75 @@ function* insertAllIterator<T>(source: Iterable<T>, index: number, newItems: Ite
     yield* newItems;
   }
 }
+
+// ==================== Combinatorial Iterator Functions ====================
+
+function* permutationsIterator<T>(arr: T[]): Generator<T[]> {
+  const len = arr.length;
+  if (len === 0) {
+    yield [];
+    return;
+  }
+  if (len === 1) {
+    yield [arr[0]!];
+    return;
+  }
+
+  // Heap's algorithm for generating permutations
+  const c = new Array<number>(len).fill(0);
+  const result = arr.slice();
+
+  yield result.slice();
+
+  let i = 0;
+  while (i < len) {
+    if (c[i]! < i) {
+      if (i % 2 === 0) {
+        [result[0], result[i]] = [result[i]!, result[0]!];
+      } else {
+        [result[c[i]!], result[i]] = [result[i]!, result[c[i]!]!];
+      }
+      yield result.slice();
+      c[i]!++;
+      i = 0;
+    } else {
+      c[i] = 0;
+      i++;
+    }
+  }
+}
+
+function* combinationsIterator<T>(arr: T[], k: number): Generator<T[]> {
+  const len = arr.length;
+  if (k === 0) {
+    yield [];
+    return;
+  }
+  if (k > len) return;
+  if (k === len) {
+    yield arr.slice();
+    return;
+  }
+
+  // Generate combinations using iterative approach
+  const indices = Array.from({ length: k }, (_, i) => i);
+
+  while (true) {
+    yield indices.map(i => arr[i]!);
+
+    // Find rightmost index that can be incremented
+    let i = k - 1;
+    while (i >= 0 && indices[i] === len - k + i) {
+      i--;
+    }
+
+    if (i < 0) break;
+
+    // Increment that index and reset all following indices
+    indices[i]!++;
+    for (let j = i + 1; j < k; j++) {
+      indices[j] = indices[j - 1]! + 1;
+    }
+  }
+}
+

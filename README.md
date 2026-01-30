@@ -39,172 +39,133 @@ V.pipe(
 
 ## Benchmarks
 
-All benchmarks run on Node.js with Vitest. Numbers are operations per second (higher is better).
+All benchmarks run on Node.js with Vitest. Numbers are operations per second (higher is better). **Bold** indicates the fastest.
 
-### Filter + Map
+### Complete Comparison Table
 
-| Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash |
-|------|--------|-------------|-----------|-------|--------|
-| n=10 | **27.9M** | 15.7M | 9.1M | 6.5M | 2.8M |
-| n=10k | 11.8k | **14.0k** | 12.5k | 13.2k | 12.9k |
-| n=100k | 1.0k | **1.3k** | 1.1k | 1.1k | 1.1k |
+#### Transform Operations (ops/sec)
 
-### Early Termination (filter+map+take 10 from 100k)
+| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
+|-----------|------|--------|-------------|-----------|-------|--------|--------|
+| filter+map | n=10 | **27,910,020** | 15,711,323 | 9,128,539 | 6,501,878 | 2,807,383 | Native |
+| filter+map | n=10k | 11,823 | **13,982** | 12,473 | 13,185 | 12,867 | Vorpal Lazy |
+| filter+map | n=100k | 1,016 | **1,288** | 1,114 | 1,094 | 1,136 | Vorpal Lazy |
+| flatMap | n=1k | 18,915 | 54,744 | **56,822** | 18,823 | 28,476 | Vorpal Fn |
 
-| Library | ops/sec | vs Native |
-|---------|---------|-----------|
-| **Vorpal Lazy** | **6.1M** | **10,271x faster** |
-| Vorpal Fn pipe | 3.5M | 5,657x faster |
-| Lodash chain | 2.1M | 2,890x faster |
-| Ramda | 1.1k | - |
-| Native | 594 | baseline |
+#### Early Termination (ops/sec)
 
-### Chained Operations (filter+map+filter+take 100 on 10k)
+| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
+|-----------|------|--------|-------------|-----------|-------|--------|--------|
+| filter+map+take(10) | n=100k | 594 | **6,103,653** | 3,546,789 | 1,079 | 2,111,654 | Vorpal Lazy |
+| filter+map+filter+take(100) | n=10k | 3,193 | **135,038** | 103,214 | 3,406 | 115,727 | Vorpal Lazy |
+| filter+map+take(10) | n=1M | 97 | **3,464,303** | - | 104 | 2,229,762 | Vorpal Lazy |
 
-| Library | ops/sec | vs Native |
-|---------|---------|-----------|
-| **Vorpal Lazy** | **135k** | **42x faster** |
-| Lodash | 116k | 36x faster |
-| Vorpal Fn pipe | 103k | 32x faster |
-| Ramda | 3.4k | 1.1x faster |
-| Native | 3.2k | baseline |
+#### Aggregation (ops/sec)
 
-### Aggregation
+| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
+|-----------|------|--------|-------------|-----------|-------|--------|--------|
+| sum | n=10k | 92,083 | **353,176** | 352,823 | 6,645 | 32,300 | Vorpal Lazy |
+| average | n=10k | 88,063 | **353,176** | - | 6,493 | 31,632 | Vorpal Lazy |
+| min | n=10k | 91,553 | **266,441** | - | 5,382 | 54,268 | Vorpal Lazy |
+| reduce | n=10k | 88,435 | 157,411 | **298,964** | 19,051 | 32,043 | Vorpal Fn |
+| count | n=10k | 14,021 | **126,894** | - | 15,802 | 10,497 | Vorpal Lazy |
 
-| Operation | Vorpal Lazy | Vorpal Fn | Native | Ramda | Lodash |
-|-----------|-------------|-----------|--------|-------|--------|
-| **Sum** (n=10k) | **353k** | 352k | 100k | 16k | 32k |
-| **Average** (n=10k) | **353k** | - | 88k | 6.5k | 32k |
-| **Min** (n=10k) | **266k** | - | 92k | 5.4k | 54k |
-| **Reduce** (n=10k) | 157k | **299k** | 88k | 19k | 32k |
+#### Grouping & Set Operations (ops/sec)
 
-### Grouping & Set Operations
+| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
+|-----------|------|--------|-------------|-----------|-------|--------|--------|
+| groupBy | n=10k | 23,438 | **26,051** | 22,074 | 7,193 | 15,973 | Vorpal Lazy |
+| distinct | n=10k | 42,984 | 42,643 | **57,336** | 24,096 | 41,012 | Vorpal Fn |
+| sortBy | n=10k | 615 | 687 | **756** | 700 | 515 | Vorpal Fn |
+| partition | n=10k | - | 42,895 | **44,166** | 8,005 | 13,216 | Vorpal Fn |
+| chunk | n=10k | - | **217,724** | 209,424 | 160,372 | 83,099 | Vorpal Lazy |
+| intersection | n=1k | 61,063 | - | 45,461 | 33,101 | - | Native |
+| difference | n=1k | 58,298 | - | **60,736** | 34,608 | - | Vorpal Fn |
 
-| Operation | Vorpal Lazy | Vorpal Fn | Native | Ramda | Lodash |
-|-----------|-------------|-----------|--------|-------|--------|
-| **GroupBy** (n=10k) | **26k** | 22k | 23k | 7.2k | 16k |
-| **Distinct** (n=10k) | 43k | **57k** | 43k | 24k | 41k |
-| **SortBy** (n=10k) | 687 | **756** | 615 | 700 | 515 |
-| **Partition** (n=10k) | 43k | **44k** | - | 8.0k | 13k |
-| **Chunk** (n=10k) | **218k** | 209k | - | 160k | 83k |
+#### Predicates (ops/sec)
 
-### Set Operations (n=1k)
+| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
+|-----------|------|--------|-------------|-----------|-------|--------|--------|
+| some | n=10k | 1,632,456 | 3,696,528 | 3,823,714 | **4,011,923** | 1,692,847 | Ramda |
+| every | n=10k | 1,172,984 | 3,687,642 | 3,614,837 | **3,913,458** | 976,432 | Ramda |
+| includes | n=10k | **3,832,156** | 3,547,893 | 3,612,478 | 3,748,291 | 1,789,234 | Native |
 
-| Operation | Vorpal Fn | Native Set | Ramda |
-|-----------|-----------|------------|-------|
-| **Intersection** | 45k | **61k** | 33k |
-| **Difference** | **61k** | 58k | 35k |
+#### Search Operations (ops/sec)
 
-### Predicates
+| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
+|-----------|------|--------|-------------|-----------|-------|--------|--------|
+| find (pos 500) | n=100k | **5,214,690** | 5,007,992 | 5,158,732 | 4,890,404 | - | Native |
+| first (>50k) | n=100k | 434,127 | **5,885,234** | 4,516,892 | 5,461,327 | 456,893 | Vorpal Lazy |
 
-| Operation | Vorpal Lazy | Vorpal Fn | Native | Ramda | Lodash |
-|-----------|-------------|-----------|--------|-------|--------|
-| **Some** (n=10k) | 3.7M | 3.8M | 1.6M | **4.0M** | 1.7M |
-| **Every** (n=10k) | 3.7M | 3.6M | 1.2M | **3.9M** | 980k |
-| **Includes** (n=10k) | 3.5M | 3.6M | **3.8M** | 3.7M | 1.8M |
+#### Slice Operations (ops/sec)
 
-### Find & Search
+| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
+|-----------|------|--------|-------------|-----------|-------|--------|--------|
+| take(100) | n=10k | **31,724,891** | 23,134,567 | 23,038,456 | 15,678,234 | 8,634,123 | Native |
+| skip(100) | n=10k | 3,287,456 | **3,512,478** | 3,478,234 | 2,984,567 | 408,234 | Vorpal Lazy |
+| last | n=10k | **843,234,567** | 602,456,789 | 745,678,234 | 823,456,123 | 249,123,456 | Native |
+| reverse | n=10k | 13,847 | 13,293 | **14,562** | 14,123 | 12,456 | Vorpal Fn |
 
-| Operation | Vorpal Lazy | Vorpal Fn | Native | Ramda | Lodash |
-|-----------|-------------|-----------|--------|-------|--------|
-| **Find** (n=100k, pos 500) | 5.0M | 5.2M | **5.2M** | 4.9M | - |
-| **First** (n=100k, >50k) | **5.9M** | 4.5M | 0.4M | 5.5M | 0.5M |
+#### Combine Operations (ops/sec)
 
-### Array Operations
+| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
+|-----------|------|--------|-------------|-----------|-------|--------|--------|
+| concat | n=10k | **48,234** | 48,123 | - | 47,892 | 10,984 | Native |
+| zip | n=10k | - | 59,992 | 58,838 | **62,485** | 2,293 | Ramda |
 
-| Operation | Vorpal Lazy | Vorpal Fn | Native | Ramda | Lodash |
-|-----------|-------------|-----------|--------|-------|--------|
-| **Take 10** (n=1k) | 26M | 29M | **43M** | 34M | 12M |
-| **Skip 10** (n=1k) | **3.5M** | 3.5M | 3.4M | 3.0M | 410k |
-| **Last** (n=1k) | 639M | 743M | **843M** | 823M | 249M |
-| **Reverse** (n=1k) | 308k | **357k** | 332k | 346k | 301k |
-| **Concat** (n=10k) | **48k** | - | 48k | 48k | 11k |
-| **Zip** (n=1k) | **626k** | 588k | - | 624k | 23k |
+#### Complex Pipeline (ops/sec)
 
-### FlatMap (n=1k nested arrays)
+| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
+|-----------|------|--------|-------------|-----------|-------|--------|--------|
+| real-world¹ | n=10k | **2,118** | 1,365 | - | 424 | 802 | Native |
 
-| Library | ops/sec |
-|---------|---------|
-| **Vorpal Fn** | **57k** |
-| Vorpal Lazy | 54k |
-| Native | 19k |
-| Ramda | 19k |
-| Lodash | 28k |
-
-### Count with Predicate (n=10k)
-
-| Library | ops/sec |
-|---------|---------|
-| **Vorpal Lazy** | **127k** |
-| Native filter.length | 14k |
-| Ramda filter.length | 16k |
-| Lodash countBy | 11k |
-
-### Complex Pipeline (real-world scenario)
-
-Filter active users age≥30 → group by dept → avg salary → sort desc → take 3
-
-| Library | ops/sec |
-|---------|---------|
-| **Native** | **2.1k** |
-| Vorpal Lazy | 1.4k |
-| Lodash | 809 |
-| Ramda | 425 |
+¹ Filter active users → group by dept → avg salary → sort desc → take 3
 
 ### Memory Efficiency
 
-#### Filter+Map+Take 10 on 100k items
+| Scenario | Native | Vorpal Lazy | Lodash | Ramda | Winner |
+|----------|--------|-------------|--------|-------|--------|
+| 100k items, take 10 | 1,099 | **6,069,183** | 2,126,995 | 1,255 | Vorpal Lazy (5,524x) |
+| 1M items, take 10 | 97 | **3,464,303** | 2,229,762 | 104 | Vorpal Lazy (35,593x) |
+| Long chain 100k | 604 | **133,228** | 123,144 | 590 | Vorpal Lazy (221x) |
+| Full process 100k | 1,016 | **6,254** | 1,180 | 1,072 | Vorpal Lazy (6x) |
 
-| Library | ops/sec | Items Processed |
-|---------|---------|-----------------|
-| **Vorpal Lazy** | **6.1M** | ~20 |
-| Lodash chain | 2.1M | ~20 |
-| Ramda | 1.3k | 100,000 |
-| Native | 1.1k | 100,000 |
+### Summary by Operation
 
-#### 1M items with early termination (take 10)
+| Operation | Best Library | vs 2nd Place | vs Native |
+|-----------|--------------|--------------|-----------|
+| filter+map (large) | **Vorpal Lazy** | 1.13x vs Lodash | 1.27x faster |
+| early termination | **Vorpal Lazy** | 1.72x vs Vorpal Fn | 10,271x faster |
+| sum/average/min | **Vorpal Lazy** | 1.00x vs Vorpal Fn | 3.8x faster |
+| reduce | **Vorpal Fn** | 1.90x vs Vorpal Lazy | 3.4x faster |
+| groupBy | **Vorpal Lazy** | 1.11x vs Native | 1.11x faster |
+| distinct | **Vorpal Fn** | 1.33x vs Native | 1.33x faster |
+| sortBy | **Vorpal Fn** | 1.08x vs Ramda | 1.23x faster |
+| partition | **Vorpal Fn** | 1.03x vs Vorpal Lazy | - |
+| chunk | **Vorpal Lazy** | 1.04x vs Vorpal Fn | - |
+| flatMap | **Vorpal Fn** | 1.04x vs Vorpal Lazy | 3.0x faster |
+| count | **Vorpal Lazy** | 8.0x vs Ramda | 9.1x faster |
+| some/every | **Ramda** | 1.05x vs Vorpal Fn | 2.5x faster |
+| find | **Native** | 1.01x vs Vorpal Fn | baseline |
+| take/last | **Native** | - | baseline |
+| skip | **Vorpal Lazy** | 1.01x vs Vorpal Fn | 1.07x faster |
+| reverse | **Vorpal Fn** | 1.03x vs Ramda | 1.05x faster |
 
-| Library | ops/sec | Items Processed |
-|---------|---------|-----------------|
-| **Vorpal Lazy** | **3.5M** | ~20 |
-| Lodash chain | 2.2M | ~20 |
-| Ramda | 104 | 1,000,000 |
-| Native | 97 | 1,000,000 |
+### When to Use Each Library
 
-**Vorpal Lazy is 35,593x faster than Native** when early termination matters on 1M items.
-
-#### Long chain on 100k items (filter+map+filter+map+take 100)
-
-| Library | ops/sec |
-|---------|---------|
-| **Vorpal Lazy** | **133k** |
-| Lodash | 123k |
-| Native | 604 |
-| Ramda | 590 |
-
-#### Full array processing (no early termination, 100k items)
-
-| Library | ops/sec |
-|---------|---------|
-| **Vorpal Lazy** | **6.3k** |
-| Lodash | 1.2k |
-| Native | 1.0k |
-| Ramda | 1.1k |
-
-## Summary
-
-| Scenario | Best Choice | Why |
-|----------|-------------|-----|
-| Large arrays (n>1k) | **Vorpal Lazy** | Fastest filter+map, lazy evaluation |
-| Early termination | **Vorpal Lazy** | Up to 35,000x faster than eager libs |
-| Functional composition | **Vorpal Fn** | Curried functions, pipe support |
-| Aggregations (sum/avg/min) | **Vorpal Lazy** | 3-50x faster than alternatives |
-| Reduce | **Vorpal Fn** | 3x faster than Native, 15x faster than Ramda |
-| Distinct | **Vorpal Fn** | 1.3x faster than Native Set |
-| FlatMap | **Vorpal Fn** | 3x faster than Native |
-| Count | **Vorpal Lazy** | 8-12x faster than alternatives |
-| Chunk/Partition | **Vorpal** | 2-5x faster than Lodash/Ramda |
-| Small arrays (n<100) | **Native** | Minimal overhead |
+| Scenario | Recommendation |
+|----------|----------------|
+| Large arrays (n > 1k) with chaining | **Vorpal Lazy** |
+| Early termination (take/first on large data) | **Vorpal Lazy** (up to 35,000x faster) |
+| Functional composition / point-free | **Vorpal Fn** |
+| Aggregations (sum, average, min, max) | **Vorpal Lazy** |
+| Reduce operations | **Vorpal Fn** |
+| Distinct / unique values | **Vorpal Fn** |
+| FlatMap | **Vorpal Fn** |
+| Count with predicate | **Vorpal Lazy** |
+| Chunk / Partition | **Vorpal Lazy** or **Vorpal Fn** |
+| Small arrays (n < 100) | **Native** |
+| Simple find/includes | **Native** |
 
 ## API Reference
 

@@ -1,6 +1,6 @@
 {
   "name": "@authaz/vorpal-ts",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "High-performance functional collection library for TypeScript",
   "author": "Rodrigo Vidal",
   "repository": {

@@ -113,6 +113,23 @@ All benchmarks run on Node.js with Vitest. Numbers are operations per second (hi
 | concat | n=10k | **48,234** | 48,123 | - | 47,892 | 10,984 | Native |
 | zip | n=10k | - | 59,992 | 58,838 | **62,485** | 2,293 | Ramda |
 
+#### Join Operations (ops/sec)
+
+| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Winner |
+|-----------|------|--------|-------------|-----------|-------|--------|
+| innerJoin | 100u/300o | 175,040 | 58,317 | **217,488** | 178,446 | Vorpal Fn |
+| innerJoin | 1ku/5ko | 6,596 | 3,232 | **7,070** | 213 | Vorpal Fn (33x vs Ramda) |
+| innerJoin | 10ku/50ko | 489 | 253 | **494** | 2 | Vorpal Fn (269x vs Ramda) |
+| leftJoin | 1ku/5ko | **12,992** | 3,480 | 9,049 | - | Native |
+| rightJoin | 1ku/5ko | - | 3,400 | **8,900** | - | Vorpal Fn |
+| fullJoin | 1ku/5ko | **9,953** | 2,856 | 8,039 | - | Native |
+| groupJoin | 1ku/5ko | **12,019** | 8,007 | 11,766 | - | Native |
+| crossJoin | 100x100 | 9,756 | 2,541 | **10,697** | 6,413 | Vorpal Fn (1.7x vs Ramda) |
+| semiJoin | 1ku/5ko | 14,463 | 15,338 | **28,614** | - | Vorpal Fn (2x vs Native) |
+| antiJoin | 1ku/5ko | 15,464 | 21,617 | **30,377** | - | Vorpal Fn (2x vs Native) |
+
+Note: Ramda's innerJoin uses O(n×m) comparison vs Vorpal's O(n+m) hash-based lookup, making Vorpal **33-269x faster** on larger datasets.
+
 #### Complex Pipeline (ops/sec)
 
 | Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
@@ -150,6 +167,10 @@ All benchmarks run on Node.js with Vitest. Numbers are operations per second (hi
 | take/last | **Native** | - | baseline |
 | skip | **Vorpal Lazy** | 1.01x vs Vorpal Fn | 1.07x faster |
 | reverse | **Vorpal Fn** | 1.03x vs Ramda | 1.05x faster |
+| innerJoin | **Vorpal Fn** | 1.07x vs Native | 33-269x vs Ramda |
+| leftJoin/fullJoin | **Native** | 1.24-1.44x vs Vorpal Fn | baseline |
+| semiJoin/antiJoin | **Vorpal Fn** | 1.4-1.9x vs Vorpal Lazy | 2x faster |
+| crossJoin | **Vorpal Fn** | 1.10x vs Native | 1.67x vs Ramda |
 
 ### When to Use Each Library
 
@@ -164,6 +185,7 @@ All benchmarks run on Node.js with Vitest. Numbers are operations per second (hi
 | FlatMap | **Vorpal Fn** |
 | Count with predicate | **Vorpal Lazy** |
 | Chunk / Partition | **Vorpal Lazy** or **Vorpal Fn** |
+| Join operations (innerJoin, semiJoin, antiJoin) | **Vorpal Fn** (33-269x faster than Ramda) |
 | Small arrays (n < 100) | **Native** |
 | Simple find/includes | **Native** |
 
@@ -187,6 +209,16 @@ V(array)
   .reverse()
   .sortBy(selector)
   .sortByDescending(selector)
+  // Join operations
+  .innerJoin(other, outerKey, innerKey, resultSelector)
+  .leftJoin(other, outerKey, innerKey, resultSelector)
+  .rightJoin(other, outerKey, innerKey, resultSelector)
+  .fullJoin(other, outerKey, innerKey, resultSelector)
+  .crossJoin(other, resultSelector)
+  .groupJoin(other, outerKey, innerKey, resultSelector)
+  .semiJoin(other, outerKey, innerKey)
+  .antiJoin(other, outerKey, innerKey)
+  // Terminal operations
   .first() / .firstOr(default)
   .last() / .lastOr(default)
   .find(predicate)
@@ -213,9 +245,16 @@ V.groupBy(keySelector, array)
 V.chunk(size, array)
 V.partition(predicate, array)
 
+// Join operations (direct)
+V.innerJoin(outer, inner, outerKey, innerKey, resultSelector)
+V.leftJoin(outer, inner, outerKey, innerKey, resultSelector)
+V.semiJoin(outer, inner, outerKey, innerKey)
+V.antiJoin(outer, inner, outerKey, innerKey)
+
 // Curried (data-last)
 V.filter(predicate)(array)
 V.map(transform)(array)
+V.innerJoin(inner, outerKey, innerKey, resultSelector)(outer)
 
 // Pipe composition
 V.pipe(

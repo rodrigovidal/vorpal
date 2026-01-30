@@ -191,7 +191,7 @@ Note: Ramda's innerJoin uses O(n×m) comparison vs Vorpal's O(n+m) hash-based lo
 
 ## API Reference
 
-### Lazy API (chainable) - 103 Methods
+### Lazy API (chainable) - 105 Methods
 
 ```typescript
 V(array)
@@ -314,6 +314,10 @@ V(array)
   .thenBy(selector)           // Secondary sort ascending
   .thenByDesc(selector)       // Secondary sort descending
 
+  // Pagination (2)
+  .page(pageNum, pageSize)    // Get items for a page (1-indexed)
+  .paginate(pageNum, pageSize) // Get page with metadata
+
   // Combinatorial (3)
   .permutations()             // All permutations (O(n!))
   .combinations(k)            // All k-combinations
@@ -333,7 +337,7 @@ V(array)
   .fromPairs()                // Key-value pairs to object
 ```
 
-### Fn API (functional) - 118 Functions
+### Fn API (functional) - 120 Functions
 
 All functions support both direct and curried (data-last) execution:
 
@@ -481,6 +485,10 @@ V.join(separator)             // Join to string
 V.range(end) / V.range(start, end, step?)
 V.repeat(value, count)        // Repeat value
 V.times(fn, count)            // Call fn n times
+
+// Pagination (2)
+V.page(pageNum, pageSize)     // Get items for a page (1-indexed)
+V.paginate(pageNum, pageSize) // Get page with metadata { items, page, total, totalPages, hasNext, hasPrev }
 
 // Lazy Evaluation (1)
 V.lazy(array)                 // Create lazy pipeline

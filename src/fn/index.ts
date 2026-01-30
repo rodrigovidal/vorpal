@@ -172,6 +172,10 @@ export const V = {
   repeat: fns.repeat,
   times: fns.times,
 
+  // Pagination
+  page: fns.page,
+  paginate: fns.paginate,
+
   // Lazy evaluation
   lazy: fns.lazy,
 
@@ -338,6 +342,10 @@ export {
   repeat,
   times,
 
+  // Pagination
+  page,
+  paginate,
+
   // Lazy
   lazy,
 
@@ -355,3 +363,6 @@ export {
   into,
   pipeT,
 } from './functions.js';
+
+// Type exports
+export type { PaginationResult } from './functions.js';

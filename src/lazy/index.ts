@@ -350,3 +350,4 @@ export function evolve<T extends Record<string, unknown>>(
 }
 
 export { VorpalLazy, VorpalOrdered };
+export type { PaginationResult } from './VorpalLazy.js';

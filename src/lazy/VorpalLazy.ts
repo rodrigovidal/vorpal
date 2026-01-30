@@ -19,6 +19,19 @@ interface SkipWhileOp { type: OpType.SkipWhile; fn: (item: unknown, index: numbe
 
 type Operation = FilterOp | MapOp | TakeOp | SkipOp | TakeWhileOp | SkipWhileOp;
 
+/**
+ * Result of paginate function with metadata.
+ */
+export interface PaginationResult<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 // Use short string keys instead of Symbols for faster property access
 // V8 optimizes string property lookups much better than Symbol lookups
 const SOURCE = '_s' as const;
@@ -1739,6 +1752,46 @@ export class VorpalLazy<T> implements Iterable<T> {
       return ownedArray(result);
     }
     return new VorpalLazy(chunkIterator(this, size), []);
+  }
+
+  /**
+   * Gets a specific page of items (1-indexed).
+   * @example
+   * ```ts
+   * V([1, 2, ..., 100]).page(2, 10); // items 11-20
+   * ```
+   */
+  page(pageNum: number, pageSize: number): T[] {
+    if (pageNum < 1 || pageSize < 1) return [];
+    const start = (pageNum - 1) * pageSize;
+    return this.skip(start).take(pageSize).toArray();
+  }
+
+  /**
+   * Gets a page of items with pagination metadata (1-indexed).
+   * @example
+   * ```ts
+   * V([1, 2, ..., 100]).paginate(2, 10);
+   * // { items: [11-20], page: 2, pageSize: 10, total: 100, totalPages: 10, hasNext: true, hasPrev: true }
+   * ```
+   */
+  paginate(pageNum: number, pageSize: number): PaginationResult<T> {
+    const arr = this.toArray();
+    const total = arr.length;
+    const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
+    const validPage = Math.max(1, Math.min(pageNum, totalPages || 1));
+    const start = (validPage - 1) * pageSize;
+    const items = pageSize > 0 ? arr.slice(start, start + pageSize) : [];
+
+    return {
+      items,
+      page: validPage,
+      pageSize,
+      total,
+      totalPages,
+      hasNext: validPage < totalPages,
+      hasPrev: validPage > 1,
+    };
   }
 
   /**

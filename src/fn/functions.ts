@@ -2835,6 +2835,71 @@ export function times<T>(fn: (index: number) => T, count: number): T[] {
   return result;
 }
 
+// ==================== Pagination Operations ====================
+
+/**
+ * Result of paginate function with metadata.
+ */
+export interface PaginationResult<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+/**
+ * Gets a specific page of items (1-indexed).
+ * @example
+ * ```ts
+ * page(2, 10)([1, 2, ..., 100]); // items 11-20
+ * page(2, 10, [1, 2, ..., 100]); // items 11-20
+ * ```
+ */
+export function page<T>(pageNum: number, pageSize: number): (arr: readonly T[]) => T[];
+export function page<T>(pageNum: number, pageSize: number, arr: readonly T[]): T[];
+export function page<T>(pageNum: number, pageSize: number, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    if (pageNum < 1 || pageSize < 1) return [];
+    const start = (pageNum - 1) * pageSize;
+    return arr.slice(start, start + pageSize) as T[];
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Gets a page of items with pagination metadata (1-indexed).
+ * @example
+ * ```ts
+ * paginate(2, 10)([1, 2, ..., 100]);
+ * // { items: [11-20], page: 2, pageSize: 10, total: 100, totalPages: 10, hasNext: true, hasPrev: true }
+ * ```
+ */
+export function paginate<T>(pageNum: number, pageSize: number): (arr: readonly T[]) => PaginationResult<T>;
+export function paginate<T>(pageNum: number, pageSize: number, arr: readonly T[]): PaginationResult<T>;
+export function paginate<T>(pageNum: number, pageSize: number, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): PaginationResult<T> => {
+    const total = arr.length;
+    const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
+    const validPage = Math.max(1, Math.min(pageNum, totalPages || 1));
+    const start = (validPage - 1) * pageSize;
+    const items = pageSize > 0 ? arr.slice(start, start + pageSize) as T[] : [];
+
+    return {
+      items,
+      page: validPage,
+      pageSize,
+      total,
+      totalPages,
+      hasNext: validPage < totalPages,
+      hasPrev: validPage > 1,
+    };
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
 // ==================== Array Manipulation Operations ====================
 
 /**

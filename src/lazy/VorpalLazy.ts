@@ -856,7 +856,9 @@ export class VorpalLazy<T> implements Iterable<T> {
   }
 
   /**
-   * Correlates elements based on matching keys.
+   * Correlates elements based on matching keys (inner join).
+   * Only returns results where keys exist in both sequences.
+   * @deprecated Use innerJoin instead
    */
   join<I, K, R>(
     inner: Iterable<I>,
@@ -864,7 +866,106 @@ export class VorpalLazy<T> implements Iterable<T> {
     innerKeySelector: KeySelector<I, K>,
     resultSelector: (outer: T, inner: I) => R
   ): VorpalLazy<R> {
-    return new VorpalLazy(joinIterator(this, inner, outerKeySelector, innerKeySelector, resultSelector), []);
+    return this.innerJoin(inner, outerKeySelector, innerKeySelector, resultSelector);
+  }
+
+  /**
+   * Inner join - returns results where keys exist in both sequences.
+   */
+  innerJoin<I, K, R>(
+    inner: Iterable<I>,
+    outerKeySelector: KeySelector<T, K>,
+    innerKeySelector: KeySelector<I, K>,
+    resultSelector: (outer: T, inner: I) => R
+  ): VorpalLazy<R> {
+    return new VorpalLazy(innerJoinIterator(this, inner, outerKeySelector, innerKeySelector, resultSelector), []);
+  }
+
+  /**
+   * Left join - returns all elements from left sequence with matched elements from right.
+   * If no match exists, inner will be undefined.
+   */
+  leftJoin<I, K, R>(
+    inner: Iterable<I>,
+    outerKeySelector: KeySelector<T, K>,
+    innerKeySelector: KeySelector<I, K>,
+    resultSelector: (outer: T, inner: I | undefined) => R
+  ): VorpalLazy<R> {
+    return new VorpalLazy(leftJoinIterator(this, inner, outerKeySelector, innerKeySelector, resultSelector), []);
+  }
+
+  /**
+   * Right join - returns all elements from right sequence with matched elements from left.
+   * If no match exists, outer will be undefined.
+   */
+  rightJoin<I, K, R>(
+    inner: Iterable<I>,
+    outerKeySelector: KeySelector<T, K>,
+    innerKeySelector: KeySelector<I, K>,
+    resultSelector: (outer: T | undefined, inner: I) => R
+  ): VorpalLazy<R> {
+    return new VorpalLazy(rightJoinIterator(this, inner, outerKeySelector, innerKeySelector, resultSelector), []);
+  }
+
+  /**
+   * Full outer join - returns all elements from both sequences.
+   * Unmatched elements will have undefined for the missing side.
+   */
+  fullJoin<I, K, R>(
+    inner: Iterable<I>,
+    outerKeySelector: KeySelector<T, K>,
+    innerKeySelector: KeySelector<I, K>,
+    resultSelector: (outer: T | undefined, inner: I | undefined) => R
+  ): VorpalLazy<R> {
+    return new VorpalLazy(fullJoinIterator(this, inner, outerKeySelector, innerKeySelector, resultSelector), []);
+  }
+
+  /**
+   * Cross join - returns the Cartesian product of two sequences.
+   * Every element from left is paired with every element from right.
+   */
+  crossJoin<I, R>(
+    inner: Iterable<I>,
+    resultSelector: (outer: T, inner: I) => R
+  ): VorpalLazy<R> {
+    return new VorpalLazy(crossJoinIterator(this, inner, resultSelector), []);
+  }
+
+  /**
+   * Group join - groups all matching right elements for each left element.
+   * Similar to left join but collects all matches into an array.
+   */
+  groupJoin<I, K, R>(
+    inner: Iterable<I>,
+    outerKeySelector: KeySelector<T, K>,
+    innerKeySelector: KeySelector<I, K>,
+    resultSelector: (outer: T, innerGroup: I[]) => R
+  ): VorpalLazy<R> {
+    return new VorpalLazy(groupJoinIterator(this, inner, outerKeySelector, innerKeySelector, resultSelector), []);
+  }
+
+  /**
+   * Semi join - returns left elements that have at least one match in right.
+   * Does not include any data from the right sequence.
+   */
+  semiJoin<I, K>(
+    inner: Iterable<I>,
+    outerKeySelector: KeySelector<T, K>,
+    innerKeySelector: KeySelector<I, K>
+  ): VorpalLazy<T> {
+    return new VorpalLazy(semiJoinIterator(this, inner, outerKeySelector, innerKeySelector), []);
+  }
+
+  /**
+   * Anti join - returns left elements that have NO match in right.
+   * Opposite of semi join.
+   */
+  antiJoin<I, K>(
+    inner: Iterable<I>,
+    outerKeySelector: KeySelector<T, K>,
+    innerKeySelector: KeySelector<I, K>
+  ): VorpalLazy<T> {
+    return new VorpalLazy(antiJoinIterator(this, inner, outerKeySelector, innerKeySelector), []);
   }
 
   /**
@@ -2241,21 +2342,36 @@ function* differenceIterator<T>(first: Iterable<T>, second: Iterable<T>, _compar
   }
 }
 
-function* joinIterator<T, I, K, R>(
+// ==================== Join Iterator Functions ====================
+
+/**
+ * Builds a lookup map from an iterable for efficient key-based access.
+ */
+function buildLookup<T, K>(items: Iterable<T>, keySelector: KeySelector<T, K>): Map<K, T[]> {
+  const lookup = new Map<K, T[]>();
+  for (const item of items) {
+    const key = keySelector(item);
+    let group = lookup.get(key);
+    if (group === undefined) {
+      group = [];
+      lookup.set(key, group);
+    }
+    group.push(item);
+  }
+  return lookup;
+}
+
+/**
+ * Inner join - returns results where keys exist in both sequences.
+ */
+function* innerJoinIterator<T, I, K, R>(
   outer: Iterable<T>,
   inner: Iterable<I>,
   outerKeySelector: KeySelector<T, K>,
   innerKeySelector: KeySelector<I, K>,
   resultSelector: (outer: T, inner: I) => R
 ): Generator<R> {
-  const innerLookup = new Map<K, I[]>();
-  for (const item of inner) {
-    const key = innerKeySelector(item);
-    if (!innerLookup.has(key)) {
-      innerLookup.set(key, []);
-    }
-    innerLookup.get(key)!.push(item);
-  }
+  const innerLookup = buildLookup(inner, innerKeySelector);
 
   for (const outerItem of outer) {
     const key = outerKeySelector(outerItem);
@@ -2264,6 +2380,176 @@ function* joinIterator<T, I, K, R>(
       for (const innerItem of matches) {
         yield resultSelector(outerItem, innerItem);
       }
+    }
+  }
+}
+
+/**
+ * Left join - all from outer, matched from inner (undefined if no match).
+ */
+function* leftJoinIterator<T, I, K, R>(
+  outer: Iterable<T>,
+  inner: Iterable<I>,
+  outerKeySelector: KeySelector<T, K>,
+  innerKeySelector: KeySelector<I, K>,
+  resultSelector: (outer: T, inner: I | undefined) => R
+): Generator<R> {
+  const innerLookup = buildLookup(inner, innerKeySelector);
+
+  for (const outerItem of outer) {
+    const key = outerKeySelector(outerItem);
+    const matches = innerLookup.get(key);
+    if (matches && matches.length > 0) {
+      for (const innerItem of matches) {
+        yield resultSelector(outerItem, innerItem);
+      }
+    } else {
+      yield resultSelector(outerItem, undefined);
+    }
+  }
+}
+
+/**
+ * Right join - all from inner, matched from outer (undefined if no match).
+ */
+function* rightJoinIterator<T, I, K, R>(
+  outer: Iterable<T>,
+  inner: Iterable<I>,
+  outerKeySelector: KeySelector<T, K>,
+  innerKeySelector: KeySelector<I, K>,
+  resultSelector: (outer: T | undefined, inner: I) => R
+): Generator<R> {
+  const outerLookup = buildLookup(outer, outerKeySelector);
+
+  for (const innerItem of inner) {
+    const key = innerKeySelector(innerItem);
+    const matches = outerLookup.get(key);
+    if (matches && matches.length > 0) {
+      for (const outerItem of matches) {
+        yield resultSelector(outerItem, innerItem);
+      }
+    } else {
+      yield resultSelector(undefined, innerItem);
+    }
+  }
+}
+
+/**
+ * Full outer join - all from both, undefined where no match.
+ */
+function* fullJoinIterator<T, I, K, R>(
+  outer: Iterable<T>,
+  inner: Iterable<I>,
+  outerKeySelector: KeySelector<T, K>,
+  innerKeySelector: KeySelector<I, K>,
+  resultSelector: (outer: T | undefined, inner: I | undefined) => R
+): Generator<R> {
+  const innerLookup = buildLookup(inner, innerKeySelector);
+  const matchedInnerKeys = new Set<K>();
+
+  // First, iterate outer and match with inner
+  for (const outerItem of outer) {
+    const key = outerKeySelector(outerItem);
+    const matches = innerLookup.get(key);
+    if (matches && matches.length > 0) {
+      matchedInnerKeys.add(key);
+      for (const innerItem of matches) {
+        yield resultSelector(outerItem, innerItem);
+      }
+    } else {
+      yield resultSelector(outerItem, undefined);
+    }
+  }
+
+  // Then, yield unmatched inner items
+  for (const [key, items] of innerLookup) {
+    if (!matchedInnerKeys.has(key)) {
+      for (const innerItem of items) {
+        yield resultSelector(undefined, innerItem);
+      }
+    }
+  }
+}
+
+/**
+ * Cross join - Cartesian product of two sequences.
+ */
+function* crossJoinIterator<T, I, R>(
+  outer: Iterable<T>,
+  inner: Iterable<I>,
+  resultSelector: (outer: T, inner: I) => R
+): Generator<R> {
+  // Materialize inner to allow multiple iterations
+  const innerArr = Array.isArray(inner) ? inner : [...inner];
+
+  for (const outerItem of outer) {
+    for (const innerItem of innerArr) {
+      yield resultSelector(outerItem, innerItem);
+    }
+  }
+}
+
+/**
+ * Group join - groups all matching inner elements for each outer element.
+ */
+function* groupJoinIterator<T, I, K, R>(
+  outer: Iterable<T>,
+  inner: Iterable<I>,
+  outerKeySelector: KeySelector<T, K>,
+  innerKeySelector: KeySelector<I, K>,
+  resultSelector: (outer: T, innerGroup: I[]) => R
+): Generator<R> {
+  const innerLookup = buildLookup(inner, innerKeySelector);
+
+  for (const outerItem of outer) {
+    const key = outerKeySelector(outerItem);
+    const matches = innerLookup.get(key) ?? [];
+    yield resultSelector(outerItem, matches);
+  }
+}
+
+/**
+ * Semi join - outer elements that have at least one match in inner.
+ */
+function* semiJoinIterator<T, I, K>(
+  outer: Iterable<T>,
+  inner: Iterable<I>,
+  outerKeySelector: KeySelector<T, K>,
+  innerKeySelector: KeySelector<I, K>
+): Generator<T> {
+  // Build a Set of inner keys for O(1) lookup
+  const innerKeys = new Set<K>();
+  for (const item of inner) {
+    innerKeys.add(innerKeySelector(item));
+  }
+
+  for (const outerItem of outer) {
+    const key = outerKeySelector(outerItem);
+    if (innerKeys.has(key)) {
+      yield outerItem;
+    }
+  }
+}
+
+/**
+ * Anti join - outer elements that have NO match in inner.
+ */
+function* antiJoinIterator<T, I, K>(
+  outer: Iterable<T>,
+  inner: Iterable<I>,
+  outerKeySelector: KeySelector<T, K>,
+  innerKeySelector: KeySelector<I, K>
+): Generator<T> {
+  // Build a Set of inner keys for O(1) lookup
+  const innerKeys = new Set<K>();
+  for (const item of inner) {
+    innerKeys.add(innerKeySelector(item));
+  }
+
+  for (const outerItem of outer) {
+    const key = outerKeySelector(outerItem);
+    if (!innerKeys.has(key)) {
+      yield outerItem;
     }
   }
 }

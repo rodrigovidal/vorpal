@@ -1394,6 +1394,623 @@ export function union<T>(arrOrOther: readonly T[], other?: readonly T[]) {
   return result;
 }
 
+// ==================== Join Operations ====================
+
+/**
+ * Builds a lookup map for efficient key-based access.
+ */
+function buildJoinLookup<T, K>(items: readonly T[], keyFn: (value: T) => K): Map<K, T[]> {
+  const lookup = new Map<K, T[]>();
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i] as T;
+    const key = keyFn(item);
+    let group = lookup.get(key);
+    if (group === undefined) {
+      group = [];
+      lookup.set(key, group);
+    }
+    group.push(item);
+  }
+  return lookup;
+}
+
+/**
+ * Inner join - returns results where keys exist in both arrays.
+ * @example
+ * ```ts
+ * const users = [{id: 1, name: 'Alice'}, {id: 2, name: 'Bob'}];
+ * const orders = [{userId: 1, product: 'Book'}, {userId: 1, product: 'Pen'}];
+ * innerJoin(orders, u => u.id, o => o.userId, (u, o) => ({...u, ...o}))(users);
+ * // [{id: 1, name: 'Alice', userId: 1, product: 'Book'}, {id: 1, name: 'Alice', userId: 1, product: 'Pen'}]
+ * ```
+ */
+export function innerJoin<T, I, K, R>(
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K,
+  resultFn: (outer: T, inner: I) => R
+): (arr: readonly T[]) => R[];
+export function innerJoin<T, I, K, R>(
+  outer: readonly T[],
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K,
+  resultFn: (outer: T, inner: I) => R
+): R[];
+export function innerJoin<T, I, K, R>(
+  outerOrInner: readonly T[] | readonly I[],
+  innerOrOuterKeyFn: readonly I[] | ((value: T) => K),
+  outerKeyFnOrInnerKeyFn: ((value: T) => K) | ((value: I) => K),
+  innerKeyFnOrResultFn: ((value: I) => K) | ((outer: T, inner: I) => R),
+  resultFn?: (outer: T, inner: I) => R
+) {
+  if (resultFn !== undefined) {
+    // Direct execution: innerJoin(outer, inner, outerKeyFn, innerKeyFn, resultFn)
+    const outer = outerOrInner as readonly T[];
+    const inner = innerOrOuterKeyFn as readonly I[];
+    const outerKeyFn = outerKeyFnOrInnerKeyFn as (value: T) => K;
+    const innerKeyFn = innerKeyFnOrResultFn as (value: I) => K;
+
+    const innerLookup = buildJoinLookup(inner, innerKeyFn);
+    const result: R[] = [];
+
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      const key = outerKeyFn(outerItem);
+      const matches = innerLookup.get(key);
+      if (matches) {
+        for (let j = 0; j < matches.length; j++) {
+          result.push(resultFn(outerItem, matches[j]!));
+        }
+      }
+    }
+    return result;
+  }
+
+  // Curried: innerJoin(inner, outerKeyFn, innerKeyFn, resultFn)(outer)
+  const inner = outerOrInner as readonly I[];
+  const outerKeyFn = innerOrOuterKeyFn as (value: T) => K;
+  const innerKeyFn = outerKeyFnOrInnerKeyFn as (value: I) => K;
+  const resFn = innerKeyFnOrResultFn as (outer: T, inner: I) => R;
+
+  return (outer: readonly T[]): R[] => {
+    const innerLookup = buildJoinLookup(inner, innerKeyFn);
+    const result: R[] = [];
+
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      const key = outerKeyFn(outerItem);
+      const matches = innerLookup.get(key);
+      if (matches) {
+        for (let j = 0; j < matches.length; j++) {
+          result.push(resFn(outerItem, matches[j]!));
+        }
+      }
+    }
+    return result;
+  };
+}
+
+/**
+ * Left join - returns all elements from left with matched elements from right.
+ * If no match exists, inner will be undefined.
+ * @example
+ * ```ts
+ * const users = [{id: 1, name: 'Alice'}, {id: 2, name: 'Bob'}];
+ * const orders = [{userId: 1, product: 'Book'}];
+ * leftJoin(orders, u => u.id, o => o.userId, (u, o) => ({name: u.name, product: o?.product}))(users);
+ * // [{name: 'Alice', product: 'Book'}, {name: 'Bob', product: undefined}]
+ * ```
+ */
+export function leftJoin<T, I, K, R>(
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K,
+  resultFn: (outer: T, inner: I | undefined) => R
+): (arr: readonly T[]) => R[];
+export function leftJoin<T, I, K, R>(
+  outer: readonly T[],
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K,
+  resultFn: (outer: T, inner: I | undefined) => R
+): R[];
+export function leftJoin<T, I, K, R>(
+  outerOrInner: readonly T[] | readonly I[],
+  innerOrOuterKeyFn: readonly I[] | ((value: T) => K),
+  outerKeyFnOrInnerKeyFn: ((value: T) => K) | ((value: I) => K),
+  innerKeyFnOrResultFn: ((value: I) => K) | ((outer: T, inner: I | undefined) => R),
+  resultFn?: (outer: T, inner: I | undefined) => R
+) {
+  if (resultFn !== undefined) {
+    const outer = outerOrInner as readonly T[];
+    const inner = innerOrOuterKeyFn as readonly I[];
+    const outerKeyFn = outerKeyFnOrInnerKeyFn as (value: T) => K;
+    const innerKeyFn = innerKeyFnOrResultFn as (value: I) => K;
+
+    const innerLookup = buildJoinLookup(inner, innerKeyFn);
+    const result: R[] = [];
+
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      const key = outerKeyFn(outerItem);
+      const matches = innerLookup.get(key);
+      if (matches && matches.length > 0) {
+        for (let j = 0; j < matches.length; j++) {
+          result.push(resultFn(outerItem, matches[j]!));
+        }
+      } else {
+        result.push(resultFn(outerItem, undefined));
+      }
+    }
+    return result;
+  }
+
+  const inner = outerOrInner as readonly I[];
+  const outerKeyFn = innerOrOuterKeyFn as (value: T) => K;
+  const innerKeyFn = outerKeyFnOrInnerKeyFn as (value: I) => K;
+  const resFn = innerKeyFnOrResultFn as (outer: T, inner: I | undefined) => R;
+
+  return (outer: readonly T[]): R[] => {
+    const innerLookup = buildJoinLookup(inner, innerKeyFn);
+    const result: R[] = [];
+
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      const key = outerKeyFn(outerItem);
+      const matches = innerLookup.get(key);
+      if (matches && matches.length > 0) {
+        for (let j = 0; j < matches.length; j++) {
+          result.push(resFn(outerItem, matches[j]!));
+        }
+      } else {
+        result.push(resFn(outerItem, undefined));
+      }
+    }
+    return result;
+  };
+}
+
+/**
+ * Right join - returns all elements from right with matched elements from left.
+ * If no match exists, outer will be undefined.
+ * @example
+ * ```ts
+ * const users = [{id: 1, name: 'Alice'}];
+ * const orders = [{userId: 1, product: 'Book'}, {userId: 2, product: 'Pen'}];
+ * rightJoin(orders, u => u.id, o => o.userId, (u, o) => ({name: u?.name, product: o.product}))(users);
+ * // [{name: 'Alice', product: 'Book'}, {name: undefined, product: 'Pen'}]
+ * ```
+ */
+export function rightJoin<T, I, K, R>(
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K,
+  resultFn: (outer: T | undefined, inner: I) => R
+): (arr: readonly T[]) => R[];
+export function rightJoin<T, I, K, R>(
+  outer: readonly T[],
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K,
+  resultFn: (outer: T | undefined, inner: I) => R
+): R[];
+export function rightJoin<T, I, K, R>(
+  outerOrInner: readonly T[] | readonly I[],
+  innerOrOuterKeyFn: readonly I[] | ((value: T) => K),
+  outerKeyFnOrInnerKeyFn: ((value: T) => K) | ((value: I) => K),
+  innerKeyFnOrResultFn: ((value: I) => K) | ((outer: T | undefined, inner: I) => R),
+  resultFn?: (outer: T | undefined, inner: I) => R
+) {
+  if (resultFn !== undefined) {
+    const outer = outerOrInner as readonly T[];
+    const inner = innerOrOuterKeyFn as readonly I[];
+    const outerKeyFn = outerKeyFnOrInnerKeyFn as (value: T) => K;
+    const innerKeyFn = innerKeyFnOrResultFn as (value: I) => K;
+
+    const outerLookup = buildJoinLookup(outer, outerKeyFn);
+    const result: R[] = [];
+
+    for (let i = 0; i < inner.length; i++) {
+      const innerItem = inner[i] as I;
+      const key = innerKeyFn(innerItem);
+      const matches = outerLookup.get(key);
+      if (matches && matches.length > 0) {
+        for (let j = 0; j < matches.length; j++) {
+          result.push(resultFn(matches[j]!, innerItem));
+        }
+      } else {
+        result.push(resultFn(undefined, innerItem));
+      }
+    }
+    return result;
+  }
+
+  const inner = outerOrInner as readonly I[];
+  const outerKeyFn = innerOrOuterKeyFn as (value: T) => K;
+  const innerKeyFn = outerKeyFnOrInnerKeyFn as (value: I) => K;
+  const resFn = innerKeyFnOrResultFn as (outer: T | undefined, inner: I) => R;
+
+  return (outer: readonly T[]): R[] => {
+    const outerLookup = buildJoinLookup(outer, outerKeyFn);
+    const result: R[] = [];
+
+    for (let i = 0; i < inner.length; i++) {
+      const innerItem = inner[i] as I;
+      const key = innerKeyFn(innerItem);
+      const matches = outerLookup.get(key);
+      if (matches && matches.length > 0) {
+        for (let j = 0; j < matches.length; j++) {
+          result.push(resFn(matches[j]!, innerItem));
+        }
+      } else {
+        result.push(resFn(undefined, innerItem));
+      }
+    }
+    return result;
+  };
+}
+
+/**
+ * Full outer join - returns all elements from both arrays.
+ * Unmatched elements will have undefined for the missing side.
+ * @example
+ * ```ts
+ * const users = [{id: 1, name: 'Alice'}];
+ * const orders = [{userId: 1, product: 'Book'}, {userId: 2, product: 'Pen'}];
+ * fullJoin(orders, u => u.id, o => o.userId, (u, o) => ({name: u?.name, product: o?.product}))(users);
+ * // [{name: 'Alice', product: 'Book'}, {name: undefined, product: 'Pen'}]
+ * ```
+ */
+export function fullJoin<T, I, K, R>(
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K,
+  resultFn: (outer: T | undefined, inner: I | undefined) => R
+): (arr: readonly T[]) => R[];
+export function fullJoin<T, I, K, R>(
+  outer: readonly T[],
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K,
+  resultFn: (outer: T | undefined, inner: I | undefined) => R
+): R[];
+export function fullJoin<T, I, K, R>(
+  outerOrInner: readonly T[] | readonly I[],
+  innerOrOuterKeyFn: readonly I[] | ((value: T) => K),
+  outerKeyFnOrInnerKeyFn: ((value: T) => K) | ((value: I) => K),
+  innerKeyFnOrResultFn: ((value: I) => K) | ((outer: T | undefined, inner: I | undefined) => R),
+  resultFn?: (outer: T | undefined, inner: I | undefined) => R
+) {
+  if (resultFn !== undefined) {
+    const outer = outerOrInner as readonly T[];
+    const inner = innerOrOuterKeyFn as readonly I[];
+    const outerKeyFn = outerKeyFnOrInnerKeyFn as (value: T) => K;
+    const innerKeyFn = innerKeyFnOrResultFn as (value: I) => K;
+
+    const innerLookup = buildJoinLookup(inner, innerKeyFn);
+    const matchedInnerKeys = new Set<K>();
+    const result: R[] = [];
+
+    // First, iterate outer and match with inner
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      const key = outerKeyFn(outerItem);
+      const matches = innerLookup.get(key);
+      if (matches && matches.length > 0) {
+        matchedInnerKeys.add(key);
+        for (let j = 0; j < matches.length; j++) {
+          result.push(resultFn(outerItem, matches[j]!));
+        }
+      } else {
+        result.push(resultFn(outerItem, undefined));
+      }
+    }
+
+    // Then, yield unmatched inner items
+    for (const [key, items] of innerLookup) {
+      if (!matchedInnerKeys.has(key)) {
+        for (let j = 0; j < items.length; j++) {
+          result.push(resultFn(undefined, items[j]!));
+        }
+      }
+    }
+    return result;
+  }
+
+  const inner = outerOrInner as readonly I[];
+  const outerKeyFn = innerOrOuterKeyFn as (value: T) => K;
+  const innerKeyFn = outerKeyFnOrInnerKeyFn as (value: I) => K;
+  const resFn = innerKeyFnOrResultFn as (outer: T | undefined, inner: I | undefined) => R;
+
+  return (outer: readonly T[]): R[] => {
+    const innerLookup = buildJoinLookup(inner, innerKeyFn);
+    const matchedInnerKeys = new Set<K>();
+    const result: R[] = [];
+
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      const key = outerKeyFn(outerItem);
+      const matches = innerLookup.get(key);
+      if (matches && matches.length > 0) {
+        matchedInnerKeys.add(key);
+        for (let j = 0; j < matches.length; j++) {
+          result.push(resFn(outerItem, matches[j]!));
+        }
+      } else {
+        result.push(resFn(outerItem, undefined));
+      }
+    }
+
+    for (const [key, items] of innerLookup) {
+      if (!matchedInnerKeys.has(key)) {
+        for (let j = 0; j < items.length; j++) {
+          result.push(resFn(undefined, items[j]!));
+        }
+      }
+    }
+    return result;
+  };
+}
+
+/**
+ * Cross join - returns the Cartesian product of two arrays.
+ * @example
+ * ```ts
+ * const colors = ['red', 'blue'];
+ * const sizes = ['S', 'M'];
+ * crossJoin(sizes, (c, s) => `${c}-${s}`)(colors);
+ * // ['red-S', 'red-M', 'blue-S', 'blue-M']
+ * ```
+ */
+export function crossJoin<T, I, R>(
+  inner: readonly I[],
+  resultFn: (outer: T, inner: I) => R
+): (arr: readonly T[]) => R[];
+export function crossJoin<T, I, R>(
+  outer: readonly T[],
+  inner: readonly I[],
+  resultFn: (outer: T, inner: I) => R
+): R[];
+export function crossJoin<T, I, R>(
+  outerOrInner: readonly T[] | readonly I[],
+  innerOrResultFn: readonly I[] | ((outer: T, inner: I) => R),
+  resultFn?: (outer: T, inner: I) => R
+) {
+  if (resultFn !== undefined) {
+    const outer = outerOrInner as readonly T[];
+    const inner = innerOrResultFn as readonly I[];
+    const result: R[] = [];
+
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      for (let j = 0; j < inner.length; j++) {
+        result.push(resultFn(outerItem, inner[j] as I));
+      }
+    }
+    return result;
+  }
+
+  const inner = outerOrInner as readonly I[];
+  const resFn = innerOrResultFn as (outer: T, inner: I) => R;
+
+  return (outer: readonly T[]): R[] => {
+    const result: R[] = [];
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      for (let j = 0; j < inner.length; j++) {
+        result.push(resFn(outerItem, inner[j]!));
+      }
+    }
+    return result;
+  };
+}
+
+/**
+ * Group join - groups all matching inner elements for each outer element.
+ * @example
+ * ```ts
+ * const users = [{id: 1, name: 'Alice'}, {id: 2, name: 'Bob'}];
+ * const orders = [{userId: 1, product: 'Book'}, {userId: 1, product: 'Pen'}];
+ * groupJoin(orders, u => u.id, o => o.userId, (u, os) => ({name: u.name, orderCount: os.length}))(users);
+ * // [{name: 'Alice', orderCount: 2}, {name: 'Bob', orderCount: 0}]
+ * ```
+ */
+export function groupJoin<T, I, K, R>(
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K,
+  resultFn: (outer: T, innerGroup: I[]) => R
+): (arr: readonly T[]) => R[];
+export function groupJoin<T, I, K, R>(
+  outer: readonly T[],
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K,
+  resultFn: (outer: T, innerGroup: I[]) => R
+): R[];
+export function groupJoin<T, I, K, R>(
+  outerOrInner: readonly T[] | readonly I[],
+  innerOrOuterKeyFn: readonly I[] | ((value: T) => K),
+  outerKeyFnOrInnerKeyFn: ((value: T) => K) | ((value: I) => K),
+  innerKeyFnOrResultFn: ((value: I) => K) | ((outer: T, innerGroup: I[]) => R),
+  resultFn?: (outer: T, innerGroup: I[]) => R
+) {
+  if (resultFn !== undefined) {
+    const outer = outerOrInner as readonly T[];
+    const inner = innerOrOuterKeyFn as readonly I[];
+    const outerKeyFn = outerKeyFnOrInnerKeyFn as (value: T) => K;
+    const innerKeyFn = innerKeyFnOrResultFn as (value: I) => K;
+
+    const innerLookup = buildJoinLookup(inner, innerKeyFn);
+    const result: R[] = [];
+
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      const key = outerKeyFn(outerItem);
+      const matches = innerLookup.get(key) ?? [];
+      result.push(resultFn(outerItem, matches));
+    }
+    return result;
+  }
+
+  const inner = outerOrInner as readonly I[];
+  const outerKeyFn = innerOrOuterKeyFn as (value: T) => K;
+  const innerKeyFn = outerKeyFnOrInnerKeyFn as (value: I) => K;
+  const resFn = innerKeyFnOrResultFn as (outer: T, innerGroup: I[]) => R;
+
+  return (outer: readonly T[]): R[] => {
+    const innerLookup = buildJoinLookup(inner, innerKeyFn);
+    const result: R[] = [];
+
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      const key = outerKeyFn(outerItem);
+      const matches = innerLookup.get(key) ?? [];
+      result.push(resFn(outerItem, matches));
+    }
+    return result;
+  };
+}
+
+/**
+ * Semi join - returns outer elements that have at least one match in inner.
+ * Does not include any data from the inner array.
+ * @example
+ * ```ts
+ * const users = [{id: 1, name: 'Alice'}, {id: 2, name: 'Bob'}];
+ * const orders = [{userId: 1, product: 'Book'}];
+ * semiJoin(orders, u => u.id, o => o.userId)(users);
+ * // [{id: 1, name: 'Alice'}]
+ * ```
+ */
+export function semiJoin<T, I, K>(
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K
+): (arr: readonly T[]) => T[];
+export function semiJoin<T, I, K>(
+  outer: readonly T[],
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K
+): T[];
+export function semiJoin<T, I, K>(
+  outerOrInner: readonly T[] | readonly I[],
+  innerOrOuterKeyFn: readonly I[] | ((value: T) => K),
+  outerKeyFnOrInnerKeyFn: ((value: T) => K) | ((value: I) => K),
+  innerKeyFn?: (value: I) => K
+) {
+  if (innerKeyFn !== undefined) {
+    const outer = outerOrInner as readonly T[];
+    const inner = innerOrOuterKeyFn as readonly I[];
+    const outerKeyFn = outerKeyFnOrInnerKeyFn as (value: T) => K;
+
+    const innerKeys = new Set<K>();
+    for (let i = 0; i < inner.length; i++) {
+      innerKeys.add(innerKeyFn(inner[i] as I));
+    }
+
+    const result: T[] = [];
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      if (innerKeys.has(outerKeyFn(outerItem))) {
+        result.push(outerItem);
+      }
+    }
+    return result;
+  }
+
+  const inner = outerOrInner as readonly I[];
+  const outerKeyFn = innerOrOuterKeyFn as (value: T) => K;
+  const innerKeyFnCurried = outerKeyFnOrInnerKeyFn as (value: I) => K;
+
+  return (outer: readonly T[]): T[] => {
+    const innerKeys = new Set<K>();
+    for (let i = 0; i < inner.length; i++) {
+      innerKeys.add(innerKeyFnCurried(inner[i]!));
+    }
+
+    const result: T[] = [];
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      if (innerKeys.has(outerKeyFn(outerItem))) {
+        result.push(outerItem);
+      }
+    }
+    return result;
+  };
+}
+
+/**
+ * Anti join - returns outer elements that have NO match in inner.
+ * Opposite of semi join.
+ * @example
+ * ```ts
+ * const users = [{id: 1, name: 'Alice'}, {id: 2, name: 'Bob'}];
+ * const orders = [{userId: 1, product: 'Book'}];
+ * antiJoin(orders, u => u.id, o => o.userId)(users);
+ * // [{id: 2, name: 'Bob'}]
+ * ```
+ */
+export function antiJoin<T, I, K>(
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K
+): (arr: readonly T[]) => T[];
+export function antiJoin<T, I, K>(
+  outer: readonly T[],
+  inner: readonly I[],
+  outerKeyFn: (value: T) => K,
+  innerKeyFn: (value: I) => K
+): T[];
+export function antiJoin<T, I, K>(
+  outerOrInner: readonly T[] | readonly I[],
+  innerOrOuterKeyFn: readonly I[] | ((value: T) => K),
+  outerKeyFnOrInnerKeyFn: ((value: T) => K) | ((value: I) => K),
+  innerKeyFn?: (value: I) => K
+) {
+  if (innerKeyFn !== undefined) {
+    const outer = outerOrInner as readonly T[];
+    const inner = innerOrOuterKeyFn as readonly I[];
+    const outerKeyFn = outerKeyFnOrInnerKeyFn as (value: T) => K;
+
+    const innerKeys = new Set<K>();
+    for (let i = 0; i < inner.length; i++) {
+      innerKeys.add(innerKeyFn(inner[i] as I));
+    }
+
+    const result: T[] = [];
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      if (!innerKeys.has(outerKeyFn(outerItem))) {
+        result.push(outerItem);
+      }
+    }
+    return result;
+  }
+
+  const inner = outerOrInner as readonly I[];
+  const outerKeyFn = innerOrOuterKeyFn as (value: T) => K;
+  const innerKeyFnCurried = outerKeyFnOrInnerKeyFn as (value: I) => K;
+
+  return (outer: readonly T[]): T[] => {
+    const innerKeys = new Set<K>();
+    for (let i = 0; i < inner.length; i++) {
+      innerKeys.add(innerKeyFnCurried(inner[i]!));
+    }
+
+    const result: T[] = [];
+    for (let i = 0; i < outer.length; i++) {
+      const outerItem = outer[i] as T;
+      if (!innerKeys.has(outerKeyFn(outerItem))) {
+        result.push(outerItem);
+      }
+    }
+    return result;
+  };
+}
+
 // ==================== Sorting Operations ====================
 
 /**

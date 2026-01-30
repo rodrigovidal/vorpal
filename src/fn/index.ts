@@ -92,6 +92,16 @@ export const V = {
   intersection: fns.intersection,
   union: fns.union,
 
+  // Join Operations
+  innerJoin: fns.innerJoin,
+  leftJoin: fns.leftJoin,
+  rightJoin: fns.rightJoin,
+  fullJoin: fns.fullJoin,
+  crossJoin: fns.crossJoin,
+  groupJoin: fns.groupJoin,
+  semiJoin: fns.semiJoin,
+  antiJoin: fns.antiJoin,
+
   // Sorting
   sortBy: fns.sortBy,
   sortByDesc: fns.sortByDesc,
@@ -192,6 +202,16 @@ export {
   difference,
   intersection,
   union,
+
+  // Join Operations
+  innerJoin,
+  leftJoin,
+  rightJoin,
+  fullJoin,
+  crossJoin,
+  groupJoin,
+  semiJoin,
+  antiJoin,
 
   // Sorting
   sortBy,

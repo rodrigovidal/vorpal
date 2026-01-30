@@ -2861,12 +2861,17 @@ export interface PaginationResult<T> {
 export function page<T>(pageNum: number, pageSize: number): (arr: readonly T[]) => T[];
 export function page<T>(pageNum: number, pageSize: number, arr: readonly T[]): T[];
 export function page<T>(pageNum: number, pageSize: number, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): T[] => {
+  // Fast path for direct 3-arg calls - avoid function creation
+  if (arr !== undefined) {
     if (pageNum < 1 || pageSize < 1) return [];
     const start = (pageNum - 1) * pageSize;
     return arr.slice(start, start + pageSize) as T[];
-  };
-  return arr === undefined ? exec : exec(arr);
+  }
+  // Pre-validate for curried version
+  if (pageNum < 1 || pageSize < 1) return () => [] as T[];
+  const start = (pageNum - 1) * pageSize;
+  const end = start + pageSize;
+  return (arr: readonly T[]): T[] => arr.slice(start, end) as T[];
 }
 
 /**
@@ -2880,15 +2885,29 @@ export function page<T>(pageNum: number, pageSize: number, arr?: readonly T[]) {
 export function paginate<T>(pageNum: number, pageSize: number): (arr: readonly T[]) => PaginationResult<T>;
 export function paginate<T>(pageNum: number, pageSize: number, arr: readonly T[]): PaginationResult<T>;
 export function paginate<T>(pageNum: number, pageSize: number, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): PaginationResult<T> => {
+  // Inline implementation for both paths to avoid function creation overhead
+  if (arr !== undefined) {
     const total = arr.length;
     const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
     const validPage = Math.max(1, Math.min(pageNum, totalPages || 1));
     const start = (validPage - 1) * pageSize;
-    const items = pageSize > 0 ? arr.slice(start, start + pageSize) as T[] : [];
-
     return {
-      items,
+      items: pageSize > 0 ? arr.slice(start, start + pageSize) as T[] : [],
+      page: validPage,
+      pageSize,
+      total,
+      totalPages,
+      hasNext: validPage < totalPages,
+      hasPrev: validPage > 1,
+    };
+  }
+  return (arr: readonly T[]): PaginationResult<T> => {
+    const total = arr.length;
+    const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
+    const validPage = Math.max(1, Math.min(pageNum, totalPages || 1));
+    const start = (validPage - 1) * pageSize;
+    return {
+      items: pageSize > 0 ? arr.slice(start, start + pageSize) as T[] : [],
       page: validPage,
       pageSize,
       total,
@@ -2897,7 +2916,6 @@ export function paginate<T>(pageNum: number, pageSize: number, arr?: readonly T[
       hasPrev: validPage > 1,
     };
   };
-  return arr === undefined ? exec : exec(arr);
 }
 
 // ==================== Array Manipulation Operations ====================
@@ -2935,11 +2953,13 @@ export function init<T>(arr: readonly T[]): T[] {
 export function takeLast<T>(n: number): (arr: readonly T[]) => T[];
 export function takeLast<T>(n: number, arr: readonly T[]): T[];
 export function takeLast<T>(n: number, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): T[] => {
-    if (n <= 0) return [];
-    return arr.slice(-n) as T[];
-  };
-  return arr === undefined ? exec : exec(arr);
+  // Fast path for direct 2-arg calls
+  if (arr !== undefined) {
+    return n <= 0 ? [] : arr.slice(-n) as T[];
+  }
+  // Pre-validate for curried version
+  if (n <= 0) return () => [] as T[];
+  return (arr: readonly T[]): T[] => arr.slice(-n) as T[];
 }
 
 /**
@@ -2953,11 +2973,13 @@ export function takeLast<T>(n: number, arr?: readonly T[]) {
 export function dropLast<T>(n: number): (arr: readonly T[]) => T[];
 export function dropLast<T>(n: number, arr: readonly T[]): T[];
 export function dropLast<T>(n: number, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): T[] => {
-    if (n <= 0) return arr.slice() as T[];
-    return arr.slice(0, -n) as T[];
-  };
-  return arr === undefined ? exec : exec(arr);
+  // Fast path for direct 2-arg calls
+  if (arr !== undefined) {
+    return n <= 0 ? arr.slice() as T[] : arr.slice(0, -n) as T[];
+  }
+  // Pre-validate for curried version
+  if (n <= 0) return (arr: readonly T[]): T[] => arr.slice() as T[];
+  return (arr: readonly T[]): T[] => arr.slice(0, -n) as T[];
 }
 
 /**
@@ -2970,7 +2992,16 @@ export function dropLast<T>(n: number, arr?: readonly T[]) {
 export function takeLastWhile<T>(predicate: Predicate<T>): (arr: readonly T[]) => T[];
 export function takeLastWhile<T>(predicate: Predicate<T>, arr: readonly T[]): T[];
 export function takeLastWhile<T>(predicate: Predicate<T>, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): T[] => {
+  // Fast path for direct 2-arg calls - inline to avoid function creation
+  if (arr !== undefined) {
+    let startIndex = arr.length;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (!predicate(arr[i] as T, i)) break;
+      startIndex = i;
+    }
+    return arr.slice(startIndex) as T[];
+  }
+  return (arr: readonly T[]): T[] => {
     let startIndex = arr.length;
     for (let i = arr.length - 1; i >= 0; i--) {
       if (!predicate(arr[i] as T, i)) break;
@@ -2978,7 +3009,6 @@ export function takeLastWhile<T>(predicate: Predicate<T>, arr?: readonly T[]) {
     }
     return arr.slice(startIndex) as T[];
   };
-  return arr === undefined ? exec : exec(arr);
 }
 
 /**
@@ -2991,7 +3021,16 @@ export function takeLastWhile<T>(predicate: Predicate<T>, arr?: readonly T[]) {
 export function dropLastWhile<T>(predicate: Predicate<T>): (arr: readonly T[]) => T[];
 export function dropLastWhile<T>(predicate: Predicate<T>, arr: readonly T[]): T[];
 export function dropLastWhile<T>(predicate: Predicate<T>, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): T[] => {
+  // Fast path for direct 2-arg calls - inline to avoid function creation
+  if (arr !== undefined) {
+    let endIndex = arr.length;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (!predicate(arr[i] as T, i)) break;
+      endIndex = i;
+    }
+    return arr.slice(0, endIndex) as T[];
+  }
+  return (arr: readonly T[]): T[] => {
     let endIndex = arr.length;
     for (let i = arr.length - 1; i >= 0; i--) {
       if (!predicate(arr[i] as T, i)) break;
@@ -2999,7 +3038,6 @@ export function dropLastWhile<T>(predicate: Predicate<T>, arr?: readonly T[]) {
     }
     return arr.slice(0, endIndex) as T[];
   };
-  return arr === undefined ? exec : exec(arr);
 }
 
 /**
@@ -3013,8 +3051,11 @@ export function dropLastWhile<T>(predicate: Predicate<T>, arr?: readonly T[]) {
 export function append<T>(value: T): (arr: readonly T[]) => T[];
 export function append<T>(value: T, arr: readonly T[]): T[];
 export function append<T>(value: T, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): T[] => [...arr, value];
-  return arr === undefined ? exec : exec(arr);
+  // Fast path: use concat for better performance than spread
+  if (arr !== undefined) {
+    return arr.concat([value]) as T[];
+  }
+  return (arr: readonly T[]): T[] => arr.concat([value]) as T[];
 }
 
 /**
@@ -3028,8 +3069,21 @@ export function append<T>(value: T, arr?: readonly T[]) {
 export function prepend<T>(value: T): (arr: readonly T[]) => T[];
 export function prepend<T>(value: T, arr: readonly T[]): T[];
 export function prepend<T>(value: T, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): T[] => [value, ...arr];
-  return arr === undefined ? exec : exec(arr);
+  // Fast path: pre-allocate array and copy
+  if (arr !== undefined) {
+    const len = arr.length;
+    const result = new Array<T>(len + 1);
+    result[0] = value;
+    for (let i = 0; i < len; i++) result[i + 1] = arr[i] as T;
+    return result;
+  }
+  return (arr: readonly T[]): T[] => {
+    const len = arr.length;
+    const result = new Array<T>(len + 1);
+    result[0] = value;
+    for (let i = 0; i < len; i++) result[i + 1] = arr[i] as T;
+    return result;
+  };
 }
 
 /**
@@ -3043,12 +3097,17 @@ export function prepend<T>(value: T, arr?: readonly T[]) {
 export function insert<T>(index: number, value: T): (arr: readonly T[]) => T[];
 export function insert<T>(index: number, value: T, arr: readonly T[]): T[];
 export function insert<T>(index: number, value: T, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): T[] => {
+  // Fast path for direct 3-arg calls
+  if (arr !== undefined) {
+    const result = arr.slice() as T[];
+    result.splice(index, 0, value);
+    return result;
+  }
+  return (arr: readonly T[]): T[] => {
     const result = arr.slice() as T[];
     result.splice(index, 0, value);
     return result;
   };
-  return arr === undefined ? exec : exec(arr);
 }
 
 /**
@@ -3151,16 +3210,29 @@ export function move<T>(from: number, to: number, arr?: readonly T[]) {
 export function intersperse<T>(separator: T): (arr: readonly T[]) => T[];
 export function intersperse<T>(separator: T, arr: readonly T[]): T[];
 export function intersperse<T>(separator: T, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): T[] => {
-    if (arr.length <= 1) return arr.slice() as T[];
-    const result: T[] = [];
-    for (let i = 0; i < arr.length; i++) {
-      if (i > 0) result.push(separator);
-      result.push(arr[i] as T);
+  // Fast path with pre-allocated array
+  if (arr !== undefined) {
+    const len = arr.length;
+    if (len <= 1) return arr.slice() as T[];
+    const result = new Array<T>(len * 2 - 1);
+    result[0] = arr[0] as T;
+    for (let i = 1; i < len; i++) {
+      result[i * 2 - 1] = separator;
+      result[i * 2] = arr[i] as T;
+    }
+    return result;
+  }
+  return (arr: readonly T[]): T[] => {
+    const len = arr.length;
+    if (len <= 1) return arr.slice() as T[];
+    const result = new Array<T>(len * 2 - 1);
+    result[0] = arr[0] as T;
+    for (let i = 1; i < len; i++) {
+      result[i * 2 - 1] = separator;
+      result[i * 2] = arr[i] as T;
     }
     return result;
   };
-  return arr === undefined ? exec : exec(arr);
 }
 
 /**
@@ -3174,10 +3246,11 @@ export function intersperse<T>(separator: T, arr?: readonly T[]) {
 export function splitAt<T>(index: number): (arr: readonly T[]) => [T[], T[]];
 export function splitAt<T>(index: number, arr: readonly T[]): [T[], T[]];
 export function splitAt<T>(index: number, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): [T[], T[]] => {
+  // Fast path for direct 2-arg calls
+  if (arr !== undefined) {
     return [arr.slice(0, index) as T[], arr.slice(index) as T[]];
-  };
-  return arr === undefined ? exec : exec(arr);
+  }
+  return (arr: readonly T[]): [T[], T[]] => [arr.slice(0, index) as T[], arr.slice(index) as T[]];
 }
 
 /**
@@ -3190,7 +3263,16 @@ export function splitAt<T>(index: number, arr?: readonly T[]) {
 export function splitWhen<T>(predicate: Predicate<T>): (arr: readonly T[]) => [T[], T[]];
 export function splitWhen<T>(predicate: Predicate<T>, arr: readonly T[]): [T[], T[]];
 export function splitWhen<T>(predicate: Predicate<T>, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): [T[], T[]] => {
+  // Fast path for direct 2-arg calls
+  if (arr !== undefined) {
+    for (let i = 0; i < arr.length; i++) {
+      if (predicate(arr[i] as T, i)) {
+        return [arr.slice(0, i) as T[], arr.slice(i) as T[]];
+      }
+    }
+    return [arr.slice() as T[], []];
+  }
+  return (arr: readonly T[]): [T[], T[]] => {
     for (let i = 0; i < arr.length; i++) {
       if (predicate(arr[i] as T, i)) {
         return [arr.slice(0, i) as T[], arr.slice(i) as T[]];
@@ -3198,7 +3280,6 @@ export function splitWhen<T>(predicate: Predicate<T>, arr?: readonly T[]) {
     }
     return [arr.slice() as T[], []];
   };
-  return arr === undefined ? exec : exec(arr);
 }
 
 /**

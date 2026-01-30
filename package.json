@@ -1,0 +1,57 @@
+{
+  "name": "@authaz/vorpal-ts",
+  "version": "0.1.2",
+  "description": "High-performance functional collection library for TypeScript",
+  "author": "Rodrigo Vidal",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/authaz/vorpal-ts.git"
+  },
+  "homepage": "https://github.com/authaz/vorpal-ts#readme",
+  "bugs": {
+    "url": "https://github.com/authaz/vorpal-ts/issues"
+  },
+  "type": "module",
+  "exports": {
+    "./lazy": {
+      "types": "./dist/lazy/index.d.ts",
+      "import": "./dist/lazy/index.js"
+    },
+    "./fn": {
+      "types": "./dist/fn/index.d.ts",
+      "import": "./dist/fn/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "bench": "vitest bench",
+    "bench:memory": "npx tsx --expose-gc benchmarks/memory-report.ts",
+    "docs": "typedoc"
+  },
+  "keywords": [
+    "array",
+    "functional",
+    "lazy",
+    "typescript",
+    "collections"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/lodash": "^4.17.23",
+    "@types/ramda": "^0.31.1",
+    "@vitest/coverage-v8": "^4.0.18",
+    "lodash": "^4.17.23",
+    "ramda": "^0.32.0",
+    "typedoc": "^0.28.16",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

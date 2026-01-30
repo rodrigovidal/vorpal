@@ -2835,6 +2835,520 @@ export function times<T>(fn: (index: number) => T, count: number): T[] {
   return result;
 }
 
+// ==================== Array Manipulation Operations ====================
+
+/**
+ * Returns all elements except the first.
+ * @example
+ * ```ts
+ * tail([1, 2, 3, 4]); // [2, 3, 4]
+ * ```
+ */
+export function tail<T>(arr: readonly T[]): T[] {
+  return arr.slice(1) as T[];
+}
+
+/**
+ * Returns all elements except the last.
+ * @example
+ * ```ts
+ * init([1, 2, 3, 4]); // [1, 2, 3]
+ * ```
+ */
+export function init<T>(arr: readonly T[]): T[] {
+  return arr.slice(0, -1) as T[];
+}
+
+/**
+ * Takes the last n elements.
+ * @example
+ * ```ts
+ * takeLast(2)([1, 2, 3, 4]); // [3, 4]
+ * takeLast(2, [1, 2, 3, 4]); // [3, 4]
+ * ```
+ */
+export function takeLast<T>(n: number): (arr: readonly T[]) => T[];
+export function takeLast<T>(n: number, arr: readonly T[]): T[];
+export function takeLast<T>(n: number, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    if (n <= 0) return [];
+    return arr.slice(-n) as T[];
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Drops the last n elements.
+ * @example
+ * ```ts
+ * dropLast(2)([1, 2, 3, 4]); // [1, 2]
+ * dropLast(2, [1, 2, 3, 4]); // [1, 2]
+ * ```
+ */
+export function dropLast<T>(n: number): (arr: readonly T[]) => T[];
+export function dropLast<T>(n: number, arr: readonly T[]): T[];
+export function dropLast<T>(n: number, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    if (n <= 0) return arr.slice() as T[];
+    return arr.slice(0, -n) as T[];
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Takes elements from the end while predicate is true.
+ * @example
+ * ```ts
+ * takeLastWhile((x: number) => x > 2)([1, 2, 3, 4]); // [3, 4]
+ * ```
+ */
+export function takeLastWhile<T>(predicate: Predicate<T>): (arr: readonly T[]) => T[];
+export function takeLastWhile<T>(predicate: Predicate<T>, arr: readonly T[]): T[];
+export function takeLastWhile<T>(predicate: Predicate<T>, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    let startIndex = arr.length;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (!predicate(arr[i] as T, i)) break;
+      startIndex = i;
+    }
+    return arr.slice(startIndex) as T[];
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Drops elements from the end while predicate is true.
+ * @example
+ * ```ts
+ * dropLastWhile((x: number) => x > 2)([1, 2, 3, 4]); // [1, 2]
+ * ```
+ */
+export function dropLastWhile<T>(predicate: Predicate<T>): (arr: readonly T[]) => T[];
+export function dropLastWhile<T>(predicate: Predicate<T>, arr: readonly T[]): T[];
+export function dropLastWhile<T>(predicate: Predicate<T>, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    let endIndex = arr.length;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (!predicate(arr[i] as T, i)) break;
+      endIndex = i;
+    }
+    return arr.slice(0, endIndex) as T[];
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Appends an element to the end of the array.
+ * @example
+ * ```ts
+ * append(4)([1, 2, 3]); // [1, 2, 3, 4]
+ * append(4, [1, 2, 3]); // [1, 2, 3, 4]
+ * ```
+ */
+export function append<T>(value: T): (arr: readonly T[]) => T[];
+export function append<T>(value: T, arr: readonly T[]): T[];
+export function append<T>(value: T, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => [...arr, value];
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Prepends an element to the beginning of the array.
+ * @example
+ * ```ts
+ * prepend(0)([1, 2, 3]); // [0, 1, 2, 3]
+ * prepend(0, [1, 2, 3]); // [0, 1, 2, 3]
+ * ```
+ */
+export function prepend<T>(value: T): (arr: readonly T[]) => T[];
+export function prepend<T>(value: T, arr: readonly T[]): T[];
+export function prepend<T>(value: T, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => [value, ...arr];
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Inserts an element at the specified index.
+ * @example
+ * ```ts
+ * insert(1, 'x')(['a', 'b', 'c']); // ['a', 'x', 'b', 'c']
+ * insert(1, 'x', ['a', 'b', 'c']); // ['a', 'x', 'b', 'c']
+ * ```
+ */
+export function insert<T>(index: number, value: T): (arr: readonly T[]) => T[];
+export function insert<T>(index: number, value: T, arr: readonly T[]): T[];
+export function insert<T>(index: number, value: T, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    const result = arr.slice() as T[];
+    result.splice(index, 0, value);
+    return result;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Inserts multiple elements at the specified index.
+ * @example
+ * ```ts
+ * insertAll(1, ['x', 'y'])(['a', 'b', 'c']); // ['a', 'x', 'y', 'b', 'c']
+ * insertAll(1, ['x', 'y'], ['a', 'b', 'c']); // ['a', 'x', 'y', 'b', 'c']
+ * ```
+ */
+export function insertAll<T>(index: number, values: readonly T[]): (arr: readonly T[]) => T[];
+export function insertAll<T>(index: number, values: readonly T[], arr: readonly T[]): T[];
+export function insertAll<T>(index: number, values: readonly T[], arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    const result = arr.slice() as T[];
+    result.splice(index, 0, ...values);
+    return result;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Replaces the element at the specified index.
+ * @example
+ * ```ts
+ * update(1, 'x')(['a', 'b', 'c']); // ['a', 'x', 'c']
+ * update(1, 'x', ['a', 'b', 'c']); // ['a', 'x', 'c']
+ * ```
+ */
+export function update<T>(index: number, value: T): (arr: readonly T[]) => T[];
+export function update<T>(index: number, value: T, arr: readonly T[]): T[];
+export function update<T>(index: number, value: T, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    const result = arr.slice() as T[];
+    const idx = index < 0 ? arr.length + index : index;
+    if (idx >= 0 && idx < arr.length) {
+      result[idx] = value;
+    }
+    return result;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Applies a function to the element at the specified index.
+ * @example
+ * ```ts
+ * adjust(1, x => x.toUpperCase())(['a', 'b', 'c']); // ['a', 'B', 'c']
+ * adjust(1, x => x.toUpperCase(), ['a', 'b', 'c']); // ['a', 'B', 'c']
+ * ```
+ */
+export function adjust<T>(index: number, fn: (value: T) => T): (arr: readonly T[]) => T[];
+export function adjust<T>(index: number, fn: (value: T) => T, arr: readonly T[]): T[];
+export function adjust<T>(index: number, fn: (value: T) => T, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    const result = arr.slice() as T[];
+    const idx = index < 0 ? arr.length + index : index;
+    if (idx >= 0 && idx < arr.length) {
+      result[idx] = fn(arr[idx] as T);
+    }
+    return result;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Moves an element from one index to another.
+ * @example
+ * ```ts
+ * move(0, 2)(['a', 'b', 'c', 'd']); // ['b', 'c', 'a', 'd']
+ * move(0, 2, ['a', 'b', 'c', 'd']); // ['b', 'c', 'a', 'd']
+ * ```
+ */
+export function move<T>(from: number, to: number): (arr: readonly T[]) => T[];
+export function move<T>(from: number, to: number, arr: readonly T[]): T[];
+export function move<T>(from: number, to: number, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    const result = arr.slice() as T[];
+    const len = result.length;
+    const fromIdx = from < 0 ? len + from : from;
+    const toIdx = to < 0 ? len + to : to;
+    if (fromIdx < 0 || fromIdx >= len || toIdx < 0 || toIdx >= len) {
+      return result;
+    }
+    const [item] = result.splice(fromIdx, 1);
+    result.splice(toIdx, 0, item!);
+    return result;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Inserts a separator between each element.
+ * @example
+ * ```ts
+ * intersperse('-')(['a', 'b', 'c']); // ['a', '-', 'b', '-', 'c']
+ * intersperse('-', ['a', 'b', 'c']); // ['a', '-', 'b', '-', 'c']
+ * ```
+ */
+export function intersperse<T>(separator: T): (arr: readonly T[]) => T[];
+export function intersperse<T>(separator: T, arr: readonly T[]): T[];
+export function intersperse<T>(separator: T, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    if (arr.length <= 1) return arr.slice() as T[];
+    const result: T[] = [];
+    for (let i = 0; i < arr.length; i++) {
+      if (i > 0) result.push(separator);
+      result.push(arr[i] as T);
+    }
+    return result;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Splits an array at the specified index.
+ * @example
+ * ```ts
+ * splitAt(2)([1, 2, 3, 4, 5]); // [[1, 2], [3, 4, 5]]
+ * splitAt(2, [1, 2, 3, 4, 5]); // [[1, 2], [3, 4, 5]]
+ * ```
+ */
+export function splitAt<T>(index: number): (arr: readonly T[]) => [T[], T[]];
+export function splitAt<T>(index: number, arr: readonly T[]): [T[], T[]];
+export function splitAt<T>(index: number, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): [T[], T[]] => {
+    return [arr.slice(0, index) as T[], arr.slice(index) as T[]];
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Splits an array when the predicate returns true.
+ * @example
+ * ```ts
+ * splitWhen((x: number) => x > 3)([1, 2, 3, 4, 5]); // [[1, 2, 3], [4, 5]]
+ * ```
+ */
+export function splitWhen<T>(predicate: Predicate<T>): (arr: readonly T[]) => [T[], T[]];
+export function splitWhen<T>(predicate: Predicate<T>, arr: readonly T[]): [T[], T[]];
+export function splitWhen<T>(predicate: Predicate<T>, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): [T[], T[]] => {
+    for (let i = 0; i < arr.length; i++) {
+      if (predicate(arr[i] as T, i)) {
+        return [arr.slice(0, i) as T[], arr.slice(i) as T[]];
+      }
+    }
+    return [arr.slice() as T[], []];
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Removes specified values from an array.
+ * @example
+ * ```ts
+ * without([2, 4])([1, 2, 3, 4, 5]); // [1, 3, 5]
+ * without([2, 4], [1, 2, 3, 4, 5]); // [1, 3, 5]
+ * ```
+ */
+export function without<T>(values: readonly T[]): (arr: readonly T[]) => T[];
+export function without<T>(values: readonly T[], arr: readonly T[]): T[];
+export function without<T>(values: readonly T[], arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    const exclude = new Set(values);
+    const result: T[] = [];
+    for (let i = 0; i < arr.length; i++) {
+      if (!exclude.has(arr[i] as T)) result.push(arr[i] as T);
+    }
+    return result;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Returns elements that are in either array but not both.
+ * @example
+ * ```ts
+ * symmetricDifference([2, 3, 4])([1, 2, 3]); // [1, 4]
+ * symmetricDifference([1, 2, 3], [2, 3, 4]); // [1, 4]
+ * ```
+ */
+export function symmetricDifference<T>(other: readonly T[]): (arr: readonly T[]) => T[];
+export function symmetricDifference<T>(arr: readonly T[], other: readonly T[]): T[];
+export function symmetricDifference<T>(arrOrOther: readonly T[], other?: readonly T[]) {
+  if (other === undefined) {
+    const otherSet = new Set(arrOrOther);
+    return (arr: readonly T[]): T[] => {
+      const arrSet = new Set(arr);
+      const result: T[] = [];
+      for (let i = 0; i < arr.length; i++) {
+        if (!otherSet.has(arr[i] as T)) result.push(arr[i] as T);
+      }
+      for (let i = 0; i < arrOrOther.length; i++) {
+        if (!arrSet.has(arrOrOther[i] as T)) result.push(arrOrOther[i] as T);
+      }
+      return result;
+    };
+  }
+  const arrSet = new Set(arrOrOther);
+  const otherSet = new Set(other);
+  const result: T[] = [];
+  for (let i = 0; i < arrOrOther.length; i++) {
+    if (!otherSet.has(arrOrOther[i] as T)) result.push(arrOrOther[i] as T);
+  }
+  for (let i = 0; i < other.length; i++) {
+    if (!arrSet.has(other[i] as T)) result.push(other[i] as T);
+  }
+  return result;
+}
+
+/**
+ * Transposes a 2D array (swaps rows and columns).
+ * @example
+ * ```ts
+ * transpose([[1, 2, 3], [4, 5, 6]]); // [[1, 4], [2, 5], [3, 6]]
+ * ```
+ */
+export function transpose<T>(arr: readonly (readonly T[])[]): T[][] {
+  if (arr.length === 0) return [];
+  const maxLen = Math.max(...arr.map(row => row.length));
+  const result: T[][] = [];
+  for (let i = 0; i < maxLen; i++) {
+    const row: T[] = [];
+    for (let j = 0; j < arr.length; j++) {
+      if (i < arr[j]!.length) {
+        row.push(arr[j]![i]!);
+      }
+    }
+    result.push(row);
+  }
+  return result;
+}
+
+// ==================== Additional Boolean Operations ====================
+
+/**
+ * Tests if no element matches predicate.
+ * @example
+ * ```ts
+ * none((x: number) => x > 5)([1, 2, 3]); // true
+ * none((x: number) => x > 5, [1, 2, 3]); // true
+ * ```
+ */
+export function none<T>(predicate: Predicate<T>): (arr: readonly T[]) => boolean;
+export function none<T>(predicate: Predicate<T>, arr: readonly T[]): boolean;
+export function none<T>(predicate: Predicate<T>, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): boolean => {
+    for (let i = 0; i < arr.length; i++) {
+      if (predicate(arr[i] as T, i)) return false;
+    }
+    return true;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Filters elements that do NOT match predicate (opposite of filter).
+ * @example
+ * ```ts
+ * reject((x: number) => x % 2 === 0)([1, 2, 3, 4]); // [1, 3]
+ * reject((x: number) => x % 2 === 0, [1, 2, 3, 4]); // [1, 3]
+ * ```
+ */
+export function reject<T>(predicate: Predicate<T>): (arr: readonly T[]) => T[];
+export function reject<T>(predicate: Predicate<T>, arr: readonly T[]): T[];
+export function reject<T>(predicate: Predicate<T>, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    const result: T[] = [];
+    for (let i = 0; i < arr.length; i++) {
+      if (!predicate(arr[i] as T, i)) result.push(arr[i] as T);
+    }
+    return result;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+// ==================== Additional Search Operations ====================
+
+/**
+ * Finds the index of the last element matching predicate.
+ * @example
+ * ```ts
+ * findLastIndex((x: number) => x % 2 === 0)([1, 2, 3, 4, 5]); // 3
+ * findLastIndex((x: number) => x % 2 === 0, [1, 2, 3, 4, 5]); // 3
+ * ```
+ */
+export function findLastIndex<T>(predicate: Predicate<T>): (arr: readonly T[]) => number;
+export function findLastIndex<T>(predicate: Predicate<T>, arr: readonly T[]): number;
+export function findLastIndex<T>(predicate: Predicate<T>, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): number => {
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (predicate(arr[i] as T, i)) return i;
+    }
+    return -1;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+/**
+ * Returns the only element if array has exactly one, otherwise throws.
+ * @example
+ * ```ts
+ * single([42]); // 42
+ * single([]); // throws Error
+ * single([1, 2]); // throws Error
+ * ```
+ */
+export function single<T>(arr: readonly T[]): T;
+export function single<T>(predicate: Predicate<T>): (arr: readonly T[]) => T;
+export function single<T>(predicate: Predicate<T>, arr: readonly T[]): T;
+export function single<T>(arrOrPred: readonly T[] | Predicate<T>, arr?: readonly T[]) {
+  if (Array.isArray(arrOrPred)) {
+    if (arrOrPred.length !== 1) {
+      throw new Error(arrOrPred.length === 0 ? 'Sequence contains no elements' : 'Sequence contains more than one element');
+    }
+    return arrOrPred[0];
+  }
+  const predicate = arrOrPred as Predicate<T>;
+  const exec = (arr: readonly T[]): T => {
+    let found: T | undefined;
+    let count = 0;
+    for (let i = 0; i < arr.length; i++) {
+      if (predicate(arr[i] as T, i)) {
+        found = arr[i] as T;
+        count++;
+        if (count > 1) throw new Error('Sequence contains more than one matching element');
+      }
+    }
+    if (count === 0) throw new Error('Sequence contains no matching element');
+    return found!;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
+// ==================== Additional Set Operations ====================
+
+/**
+ * Returns unique elements using a custom equality function.
+ * @example
+ * ```ts
+ * uniqWith((a, b) => a.id === b.id)([{id: 1}, {id: 2}, {id: 1}]); // [{id: 1}, {id: 2}]
+ * ```
+ */
+export function uniqWith<T>(compareFn: (a: T, b: T) => boolean): (arr: readonly T[]) => T[];
+export function uniqWith<T>(compareFn: (a: T, b: T) => boolean, arr: readonly T[]): T[];
+export function uniqWith<T>(compareFn: (a: T, b: T) => boolean, arr?: readonly T[]) {
+  const exec = (arr: readonly T[]): T[] => {
+    const result: T[] = [];
+    for (let i = 0; i < arr.length; i++) {
+      const item = arr[i] as T;
+      let isDuplicate = false;
+      for (let j = 0; j < result.length; j++) {
+        if (compareFn(item, result[j]!)) {
+          isDuplicate = true;
+          break;
+        }
+      }
+      if (!isDuplicate) result.push(item);
+    }
+    return result;
+  };
+  return arr === undefined ? exec : exec(arr);
+}
+
 // ==================== Transducers ====================
 
 /**

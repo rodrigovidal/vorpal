@@ -191,135 +191,337 @@ Note: Ramda's innerJoin uses O(n×m) comparison vs Vorpal's O(n+m) hash-based lo
 
 ## API Reference
 
-### Lazy API (chainable)
+### Lazy API (chainable) - 103 Methods
 
 ```typescript
 V(array)
-  .filter(predicate)
-  .map(transform)
-  .flatMap(transform)
-  .take(n)
-  .skip(n)
-  .distinct()
-  .distinctBy(selector)
-  .chunk(size)
-  .partition(predicate)
-  .groupBy(keySelector)
-  .zip(other, combiner)
-  .reverse()
-  .sortBy(selector)
-  .sortByDescending(selector)
-  // Set operations with key selector
-  .unionBy(other, keySelector)
-  .intersectBy(other, keySelector)
-  .differenceBy(other, keySelector)
-  .exceptBy(other, keySelector)  // Alias for differenceBy
-  // Join operations
-  .innerJoin(other, outerKey, innerKey, resultSelector)
-  .leftJoin(other, outerKey, innerKey, resultSelector)
-  .rightJoin(other, outerKey, innerKey, resultSelector)
-  .fullJoin(other, outerKey, innerKey, resultSelector)
-  .crossJoin(other, resultSelector)
-  .groupJoin(other, outerKey, innerKey, resultSelector)
+  // Transformation (11)
+  .filter(predicate)          // Keep matching elements
+  .reject(predicate)          // Remove matching elements
+  .map(transform)             // Transform elements
+  .flatMap(transform)         // Transform and flatten
+  .flatten()                  // Flatten nested arrays
+  .pluck(key)                 // Extract property values
+  .reverse()                  // Reverse order
+  .concat(other)              // Append array
+  .zip(other, combiner)       // Combine arrays
+  .chunk(size)                // Split into chunks
+  .transpose()                // Swap rows/columns
+
+  // Array Manipulation (12)
+  .append(item)               // Add to end
+  .prepend(item)              // Add to beginning
+  .insert(index, item)        // Insert at position
+  .insertAll(index, items)    // Insert multiple at position
+  .update(index, value)       // Replace at position
+  .adjust(index, fn)          // Apply fn at position
+  .move(from, to)             // Move element
+  .intersperse(separator)     // Insert between elements
+  .without(exclusions)        // Remove values
+  .splitAt(index)             // Split at position
+  .splitWhen(predicate)       // Split when predicate true
+  .xprod(other)               // Cross product
+
+  // Slicing (11)
+  .take(n)                    // First n elements
+  .takeWhile(predicate)       // While predicate true
+  .takeLast(n)                // Last n elements
+  .takeLastWhile(predicate)   // From end while true
+  .skip(n)                    // Skip first n
+  .skipWhile(predicate)       // Skip while true
+  .dropLast(n)                // Remove last n
+  .dropLastWhile(predicate)   // Remove from end while true
+  .slice(start, end?)         // Slice range
+  .tail()                     // All but first
+  .init()                     // All but last
+
+  // Element Access (8)
+  .first(predicate?)          // First element
+  .firstOr(default)           // First or default
+  .last(predicate?)           // Last element
+  .lastOr(default)            // Last or default
+  .single(predicate?)         // Single element or throw
+  .at(index)                  // Element at index
+  .findIndex(predicate)       // Index of first match
+  .findLastIndex(predicate)   // Index of last match
+
+  // Search (4)
+  .indexOf(value)             // Index of value
+  .lastIndexOf(value)         // Last index of value
+  .binarySearch(value, cmp?)  // Binary search (-1 if not found)
+  .binarySearchIndex(value)   // Insertion point
+
+  // Boolean (4)
+  .some(predicate?)           // Any match
+  .every(predicate)           // All match
+  .none(predicate)            // No match
+  .includes(value)            // Contains value
+  .isEmpty()                  // Is empty
+
+  // Aggregation (10)
+  .count(predicate?)          // Count elements
+  .countBy(keySelector)       // Count by group
+  .sum(selector?)             // Sum of values
+  .average(selector?)         // Average of values
+  .min(selector?)             // Minimum value
+  .max(selector?)             // Maximum value
+  .reduce(fn, initial)        // Reduce to single value
+  .scan(fn, initial)          // Cumulative reduce
+  .aggregateBy(key, seed, fn) // Group and aggregate
+
+  // Grouping (3)
+  .groupBy(keySelector)       // Group by key
+  .indexBy(keySelector)       // Index by key (last wins)
+  .partition(predicate)       // Split by predicate
+
+  // Set Operations (11)
+  .distinct()                 // Unique elements
+  .distinctBy(selector)       // Unique by key
+  .uniqWith(compareFn)        // Unique with custom equality
+  .union(other)               // Combine unique
+  .unionBy(other, selector)   // Combine unique by key
+  .intersect(other)           // Common elements
+  .intersectBy(other, sel)    // Common by key
+  .difference(other)          // In first not second
+  .differenceBy(other, sel)   // Difference by key
+  .exceptBy(other, sel)       // Alias for differenceBy
+  .symmetricDifference(other) // XOR operation
+
+  // Join Operations (9)
+  .innerJoin(other, outerKey, innerKey, resultFn)
+  .leftJoin(other, outerKey, innerKey, resultFn)
+  .rightJoin(other, outerKey, innerKey, resultFn)
+  .fullJoin(other, outerKey, innerKey, resultFn)
+  .crossJoin(other, resultFn)
+  .groupJoin(other, outerKey, innerKey, resultFn)
   .semiJoin(other, outerKey, innerKey)
   .antiJoin(other, outerKey, innerKey)
-  // Windowing operations
-  .aperture(size, step?)    // Sliding windows with optional step
-  .slidingWindow(size, step?)  // Alias for aperture
-  .pairwise()               // Consecutive pairs [[1,2], [2,3], ...]
-  // Comparison operations
-  .sequenceEqual(other, comparer?)  // Check if sequences match
-  .startsWith(prefix, comparer?)    // Check if starts with prefix
-  .endsWith(suffix, comparer?)      // Check if ends with suffix
-  // Terminal operations
-  .first() / .firstOr(default)
-  .last() / .lastOr(default)
-  .find(predicate)
-  .some(predicate)
-  .every(predicate)
-  .includes(value)
-  .count()
-  .sum() / .average() / .min() / .max()
-  .reduce(reducer, initial)
-  .scan(reducer, initial)     // Cumulative reduce, returns all intermediate values
-  .aggregateBy(keyFn, seed, reducer)  // Group and aggregate in one pass
-  // Combinatorial operations
+  .join(inner, outerKey, innerKey, resultFn)  // Alias for innerJoin
+
+  // Windowing (3)
+  .aperture(size, step?)      // Sliding windows
+  .slidingWindow(size, step?) // Alias for aperture
+  .pairwise()                 // Consecutive pairs
+
+  // Comparison (3)
+  .sequenceEqual(other, cmp?) // Equal sequences
+  .startsWith(prefix, cmp?)   // Starts with prefix
+  .endsWith(suffix, cmp?)     // Ends with suffix
+
+  // Sorting (4)
+  .sortBy(selector)           // Sort ascending by key
+  .sortByDesc(selector)       // Sort descending by key
+  .thenBy(selector)           // Secondary sort ascending
+  .thenByDesc(selector)       // Secondary sort descending
+
+  // Combinatorial (3)
   .permutations()             // All permutations (O(n!))
   .combinations(k)            // All k-combinations
-  // Randomization
   .shuffle()                  // Random order
   .sample(n)                  // n random elements
   .random()                   // Single random element
-  // Search
-  .binarySearch(value, compareFn?)      // Binary search (-1 if not found)
-  .binarySearchIndex(value, compareFn?) // Insertion point
-  .toArray()
-  .toMap(keySelector, valueSelector)
-  .toSet()
+
+  // Type Conversion (2)
+  .as<U>()                    // Cast type
+  .ofType<U>(typeGuard)       // Filter by type
+
+  // Terminal (5)
+  .toArray()                  // Materialize array
+  .toSet()                    // Convert to Set
+  .toMap(keyFn, valueFn?)     // Convert to Map
+  .toObject(keyFn, valueFn?)  // Convert to object
+  .fromPairs()                // Key-value pairs to object
 ```
 
-### Fn API (functional)
+### Fn API (functional) - 118 Functions
+
+All functions support both direct and curried (data-last) execution:
 
 ```typescript
-// Direct calls
-V.filter(predicate, array)
-V.map(transform, array)
-V.take(n, array)
-V.sum(array)
-V.groupBy(keySelector, array)
-V.chunk(size, array)
-V.partition(predicate, array)
+// Pipe / Compose (2)
+V.pipe(fn1, fn2, ...)         // Left-to-right composition
+V.compose(fn1, fn2, ...)      // Right-to-left composition
 
-// Join operations (direct)
-V.innerJoin(outer, inner, outerKey, innerKey, resultSelector)
-V.leftJoin(outer, inner, outerKey, innerKey, resultSelector)
-V.semiJoin(outer, inner, outerKey, innerKey)
-V.antiJoin(outer, inner, outerKey, innerKey)
+// Transformation (10)
+V.filter(predicate)           // Keep matching
+V.reject(predicate)           // Remove matching
+V.map(transform)              // Transform elements
+V.flatMap(transform)          // Transform and flatten
+V.flatten(array)              // Flatten nested
+V.reverse(array)              // Reverse order
+V.concat(other)               // Append array
+V.zip(other, combiner)        // Combine arrays
+V.chunk(size)                 // Split into chunks
+V.transpose(array)            // Swap rows/columns
 
-// Windowing operations
-V.aperture(size, step?)(array)    // Sliding windows
-V.slidingWindow(size, step?)(array)  // Alias for aperture
-V.pairwise(array)                 // Consecutive pairs
+// Array Manipulation (11)
+V.append(value)               // Add to end
+V.prepend(value)              // Add to beginning
+V.insert(index, value)        // Insert at position
+V.insertAll(index, values)    // Insert multiple
+V.update(index, value)        // Replace at position
+V.adjust(index, fn)           // Apply fn at position
+V.move(from, to)              // Move element
+V.intersperse(separator)      // Insert between
+V.without(values)             // Remove values
+V.splitAt(index)              // Split at position
+V.splitWhen(predicate)        // Split when true
 
-// Comparison operations
-V.sequenceEqual(other, comparer?)(array)  // Check if sequences match
-V.startsWith(prefix, comparer?)(array)    // Check if starts with prefix
-V.endsWith(suffix, comparer?)(array)      // Check if ends with suffix
+// Slicing (10)
+V.take(n)                     // First n elements
+V.takeWhile(predicate)        // While predicate true
+V.takeLast(n)                 // Last n elements
+V.takeLastWhile(predicate)    // From end while true
+V.skip(n)                     // Skip first n
+V.skipWhile(predicate)        // Skip while true
+V.dropLast(n)                 // Remove last n
+V.dropLastWhile(predicate)    // Remove from end while true
+V.slice(start, end?)          // Slice range
+V.tail(array)                 // All but first
+V.init(array)                 // All but last
 
-// Set operations with key selector
-V.unionBy(keyFn)(other)(array)
-V.intersectionBy(keyFn)(other)(array)
-V.differenceBy(keyFn)(other)(array)
-V.exceptBy(keyFn)(other)(array)  // Alias for differenceBy
+// Element Access (8)
+V.first(predicate?)           // First element
+V.firstOr(default, pred?)     // First or default
+V.last(predicate?)            // Last element
+V.lastOr(default, pred?)      // Last or default
+V.single(predicate?)          // Single or throw
+V.at(index)                   // Element at index
 
-// Aggregation
-V.scan(reducer, initial)(array)           // Cumulative reduce
-V.aggregateBy(keyFn, seed, reducer)(array)  // Group and aggregate
+// Search (5)
+V.find(predicate)             // Find element
+V.findIndex(predicate)        // Index of first match
+V.findLastIndex(predicate)    // Index of last match
+V.indexOf(value)              // Index of value
+V.lastIndexOf(value)          // Last index of value
 
-// Combinatorial
+// Boolean (5)
+V.some(predicate)             // Any match
+V.every(predicate)            // All match
+V.none(predicate)             // No match
+V.includes(value)             // Contains value
+V.isEmpty(array)              // Is empty
+
+// Aggregation (11)
+V.count(predicate?)           // Count elements
+V.sum(selector?)              // Sum of values
+V.average(selector?)          // Average of values
+V.min(selector?)              // Minimum value
+V.max(selector?)              // Maximum value
+V.minBy(selector)             // Element with min value
+V.maxBy(selector)             // Element with max value
+V.reduce(fn, initial)         // Reduce to single value
+V.reduceRight(fn, initial)    // Reduce from right
+V.scan(fn, initial)           // Cumulative reduce
+V.aggregateBy(keyFn, seed, fn)// Group and aggregate
+
+// Grouping (4)
+V.groupBy(keySelector)        // Group by key (object)
+V.groupByMap(keySelector)     // Group by key (Map)
+V.keyBy(keySelector)          // Index by key
+V.partition(predicate)        // Split by predicate
+
+// Set Operations (12)
+V.distinct(keyFn?)            // Unique elements
+V.uniqWith(compareFn)         // Unique with custom equality
+V.difference(other)           // In first not second
+V.intersection(other)         // Common elements
+V.union(other)                // Combine unique
+V.symmetricDifference(other)  // XOR operation
+V.differenceBy(keyFn)(other)  // Difference by key
+V.exceptBy(keyFn)(other)      // Alias for differenceBy
+V.intersectionBy(keyFn)(other)// Intersection by key
+V.unionBy(keyFn)(other)       // Union by key
+V.without(values)             // Remove values
+
+// Join Operations (9)
+V.innerJoin(inner, outerKey, innerKey, resultFn)
+V.leftJoin(inner, outerKey, innerKey, resultFn)
+V.rightJoin(inner, outerKey, innerKey, resultFn)
+V.fullJoin(inner, outerKey, innerKey, resultFn)
+V.crossJoin(inner, resultFn)
+V.groupJoin(inner, outerKey, innerKey, resultFn)
+V.semiJoin(inner, outerKey, innerKey)
+V.antiJoin(inner, outerKey, innerKey)
+
+// Windowing (3)
+V.aperture(size, step?)       // Sliding windows
+V.slidingWindow(size, step?)  // Alias for aperture
+V.pairwise(array)             // Consecutive pairs
+
+// Comparison (3)
+V.sequenceEqual(other, cmp?)  // Equal sequences
+V.startsWith(prefix, cmp?)    // Starts with prefix
+V.endsWith(suffix, cmp?)      // Ends with suffix
+
+// Sorting (3)
+V.sort(comparator)            // Sort with comparator
+V.sortBy(selector)            // Sort ascending by key
+V.sortByDesc(selector)        // Sort descending by key
+
+// Combinatorial (3)
 V.permutations(array)         // All permutations
-V.combinations(k)(array)      // All k-combinations
+V.combinations(k)             // All k-combinations
 
-// Randomization
+// Randomization (3)
 V.shuffle(array)              // Random order
-V.sample(n)(array)            // n random elements
+V.sample(n)                   // n random elements
 V.randomElement(array)        // Single random element
 
-// Search
-V.binarySearch(value)(array)       // Binary search
-V.binarySearchIndex(value)(array)  // Insertion point
+// Binary Search (2)
+V.binarySearch(value, cmp?)   // Find index (-1 if not found)
+V.binarySearchIndex(value)    // Insertion point
 
-// Curried (data-last)
-V.filter(predicate)(array)
-V.map(transform)(array)
-V.innerJoin(inner, outerKey, innerKey, resultSelector)(outer)
+// Utility (4)
+V.forEach(fn)                 // Execute for each
+V.tap(fn)                     // Side-effect in pipeline
+V.join(separator)             // Join to string
 
-// Pipe composition
-V.pipe(
-  V.filter(predicate),
-  V.map(transform),
-  V.take(n)
-)(array)
+// Generators (3)
+V.range(end) / V.range(start, end, step?)
+V.repeat(value, count)        // Repeat value
+V.times(fn, count)            // Call fn n times
+
+// Lazy Evaluation (1)
+V.lazy(array)                 // Create lazy pipeline
+
+// Transducers (12)
+V.filterT(predicate)          // Transducer filter
+V.mapT(transform)             // Transducer map
+V.flatMapT(transform)         // Transducer flatMap
+V.takeT(n)                    // Transducer take
+V.skipT(n)                    // Transducer skip
+V.takeWhileT(predicate)       // Transducer takeWhile
+V.skipWhileT(predicate)       // Transducer skipWhile
+V.distinctT(keyFn?)           // Transducer distinct
+V.comp(t1, t2, ...)           // Compose transducers
+V.transduce(xf)               // Apply transducer
+V.into(target, xf, array)     // Transduce into collection
+V.pipeT(t1, t2, ...)          // Transducer pipe
+```
+
+### Example Usage
+
+```typescript
+// Lazy API - chainable, lazy evaluation
+V([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+  .filter(x => x % 2 === 0)
+  .map(x => x * 2)
+  .take(3)
+  .toArray(); // [4, 8, 12]
+
+// Fn API - functional, curried
+const process = V.pipe(
+  V.filter((x: number) => x % 2 === 0),
+  V.map((x: number) => x * 2),
+  V.take(3)
+);
+process([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]); // [4, 8, 12]
+
+// Direct execution
+V.sum([1, 2, 3, 4, 5]); // 15
+V.groupBy((x: { type: string }) => x.type, items);
+V.innerJoin(users, orders, u => u.id, o => o.userId, (u, o) => ({...u, ...o}));
 ```
 
 ## License

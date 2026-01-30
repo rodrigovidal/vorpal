@@ -35,6 +35,7 @@ export const V = {
 
   // Transformation
   filter: fns.filter,
+  reject: fns.reject,
   map: fns.map,
   flatMap: fns.flatMap,
   reverse: fns.reverse,
@@ -42,12 +43,29 @@ export const V = {
   zip: fns.zip,
   chunk: fns.chunk,
   flatten: fns.flatten,
+  transpose: fns.transpose,
+
+  // Array Manipulation
+  append: fns.append,
+  prepend: fns.prepend,
+  insert: fns.insert,
+  insertAll: fns.insertAll,
+  update: fns.update,
+  adjust: fns.adjust,
+  move: fns.move,
+  intersperse: fns.intersperse,
+  splitAt: fns.splitAt,
+  splitWhen: fns.splitWhen,
 
   // Slicing
   take: fns.take,
   takeWhile: fns.takeWhile,
+  takeLast: fns.takeLast,
+  takeLastWhile: fns.takeLastWhile,
   skip: fns.skip,
   skipWhile: fns.skipWhile,
+  dropLast: fns.dropLast,
+  dropLastWhile: fns.dropLastWhile,
   slice: fns.slice,
 
   // Element Access
@@ -56,16 +74,21 @@ export const V = {
   last: fns.last,
   lastOr: fns.lastOr,
   at: fns.at,
+  tail: fns.tail,
+  init: fns.init,
+  single: fns.single,
 
   // Search
   find: fns.find,
   findIndex: fns.findIndex,
+  findLastIndex: fns.findLastIndex,
   indexOf: fns.indexOf,
   lastIndexOf: fns.lastIndexOf,
 
   // Boolean
   every: fns.every,
   some: fns.some,
+  none: fns.none,
   includes: fns.includes,
   isEmpty: fns.isEmpty,
 
@@ -93,10 +116,13 @@ export const V = {
   difference: fns.difference,
   intersection: fns.intersection,
   union: fns.union,
+  symmetricDifference: fns.symmetricDifference,
   differenceBy: fns.differenceBy,
   exceptBy: fns.exceptBy,
   intersectionBy: fns.intersectionBy,
   unionBy: fns.unionBy,
+  uniqWith: fns.uniqWith,
+  without: fns.without,
 
   // Join Operations
   innerJoin: fns.innerJoin,
@@ -175,6 +201,7 @@ export {
 
   // Transformation
   filter,
+  reject,
   map,
   flatMap,
   reverse,
@@ -182,12 +209,29 @@ export {
   zip,
   chunk,
   flatten,
+  transpose,
+
+  // Array Manipulation
+  append,
+  prepend,
+  insert,
+  insertAll,
+  update,
+  adjust,
+  move,
+  intersperse,
+  splitAt,
+  splitWhen,
 
   // Slicing
   take,
   takeWhile,
+  takeLast,
+  takeLastWhile,
   skip,
   skipWhile,
+  dropLast,
+  dropLastWhile,
   slice,
 
   // Element Access
@@ -196,16 +240,21 @@ export {
   last,
   lastOr,
   at,
+  tail,
+  init,
+  single,
 
   // Search
   find,
   findIndex,
+  findLastIndex,
   indexOf,
   lastIndexOf,
 
   // Boolean
   every,
   some,
+  none,
   includes,
   isEmpty,
 
@@ -233,10 +282,13 @@ export {
   difference,
   intersection,
   union,
+  symmetricDifference,
   differenceBy,
   exceptBy,
   intersectionBy,
   unionBy,
+  uniqWith,
+  without,
 
   // Join Operations
   innerJoin,

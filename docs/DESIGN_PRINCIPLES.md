@@ -1,60 +1,78 @@
 # Vorpal Design Principles
 
-## Error Handling Strategy
+## Error Handling Strategy: Safe by Default
 
-Vorpal follows a **"fail gracefully where possible, throw only when mathematically undefined"** approach.
+Vorpal follows a **"fail gracefully, never throw"** approach. All functions return safe, predictable values instead of throwing exceptions.
 
-### Three Categories of Functions
+### Philosophy
 
-| Category | Behavior | Examples |
-|----------|----------|----------|
-| **Transformations** | Return empty array for invalid inputs | `page`, `take`, `filter`, `skip`, `slice` |
-| **Accessors** | Throw when element doesn't exist | `first`, `last`, `single`, `at` |
-| **Aggregations** | Throw on empty (undefined result) | `min`, `max`, `average`, `sum` |
+1. **No exceptions in user code** - Exceptions should be rare and indicate programmer errors, not data conditions
+2. **Predictable return types** - Functions always return the documented type, no surprises
+3. **Chainable by design** - Safe returns enable fluid method chaining without try/catch
+4. **Consistent behavior** - Same pattern across all function categories
 
-### 1. Transformation Functions (Graceful)
+### Two Categories of Functions
 
-These always return a valid array, never throw:
+| Category | Empty/Invalid Behavior | Examples |
+|----------|------------------------|----------|
+| **Transformations** | Return empty array `[]` | `filter`, `map`, `take`, `skip`, `page`, `slice` |
+| **Accessors/Aggregations** | Return `undefined` | `first`, `last`, `single`, `at`, `min`, `max`, `average` |
+
+### 1. Transformation Functions
+
+These always return a valid array, never throw or return undefined:
 
 ```typescript
-page(-1, 5, arr)     // → [] (invalid page)
-take(0, arr)         // → [] (take nothing)
+page(-1, 5, arr)        // → [] (invalid page number)
+take(0, arr)            // → [] (take nothing)
 filter(x => false, arr) // → [] (nothing matches)
-skip(1000, [1,2,3])  // → [] (skip past end)
+skip(1000, [1,2,3])     // → [] (skip past end)
+chunk(0, arr)           // → [] (invalid chunk size)
 ```
 
-**Rationale**: Invalid inputs produce empty results. The operation is still defined, just yields nothing.
+**Rationale**: Invalid inputs produce empty results. The operation is still defined, just yields nothing. This enables safe chaining.
 
-### 2. Accessor Functions (Throw + Safe Alternative)
+### 2. Accessor & Aggregation Functions
 
-These throw when no element exists, but provide safe alternatives:
+These return `T | undefined` for element access, and `number | undefined` for numeric aggregations:
 
 ```typescript
-// Throwing versions (use when you KNOW element exists)
-first([])           // throws: "Sequence contains no elements"
-last([])            // throws: "Sequence contains no elements"
-single([1, 2])      // throws: "Sequence contains more than one element"
-at(10, [1, 2, 3])   // throws: "Index out of range"
+// Element access - returns T | undefined
+first([])              // → undefined
+last([])               // → undefined
+single([1, 2])         // → undefined (more than one element)
+single([])             // → undefined (no elements)
+at(10, [1, 2, 3])      // → undefined (out of range)
+find(x => x > 10, arr) // → undefined (no match)
 
-// Safe alternatives (use when element may not exist)
-firstOr(0, [])      // → 0 (returns default)
-lastOr(0, [])       // → 0 (returns default)
-find(x => x > 10, arr) // → undefined (returns undefined, not throw)
+// Aggregations - returns number | undefined
+min([])                // → undefined
+max([])                // → undefined
+average([])            // → undefined
 ```
 
-**Rationale**: Returning `undefined` would change the return type and force null checks everywhere. Throwing is explicit. Safe alternatives exist when you need them.
+**Rationale**: `undefined` is the natural JavaScript way to represent "no value". It enables simple conditional checks and optional chaining.
 
-### 3. Aggregation Functions (Throw)
+### Why No Throwing?
 
-These throw on empty because the result is mathematically undefined:
+1. **Type safety**: Return type accurately reflects all possible outcomes
+2. **Composability**: No need for try/catch in chains
+3. **Performance**: No exception overhead in hot paths
+4. **Predictability**: Behavior is consistent and documented
+5. **JavaScript idiom**: `undefined` is the standard "no value" representation
 
 ```typescript
-min([])      // throws: "Sequence contains no elements"
-max([])      // throws: "Sequence contains no elements"
-average([])  // throws: "Sequence contains no elements"
-```
+// Clean pattern with safe returns
+const value = V.first(arr) ?? defaultValue;
+const result = V([1,2,3]).first(x => x > 10) ?? 0;
 
-**Rationale**: What's `min([])`? `Infinity`? `NaN`? `0`? All are misleading. Throwing makes the undefined case explicit.
+// Vs throwing approach requiring try/catch
+try {
+  const value = V.first(arr);
+} catch (e) {
+  const value = defaultValue;
+}
+```
 
 ## Performance Principles
 
@@ -116,16 +134,17 @@ return (arr) => arr.slice(start, end);
 return (arr) => arr.slice((pageNum - 1) * pageSize, pageNum * pageSize);
 ```
 
-### 5. No Exceptions in Hot Path
+### 5. No Exceptions in Any Path
 
 Exceptions are slow. Use return values:
 
 ```typescript
-// ✅ Good: return empty for invalid
-return pageNum > 0 ? arr.slice(...) : [];
+// ✅ Good: return undefined for missing
+return arr.length > 0 ? arr[0] : undefined;
 
-// ❌ Bad: throw in common path
-if (pageNum < 1) throw new RangeError("Invalid page");
+// ❌ Bad: throw
+if (arr.length === 0) throw new Error("Empty");
+return arr[0];
 ```
 
 ## Type Safety
@@ -150,37 +169,22 @@ const result = take(5, arr);
 result.push(6);  // ✅ allowed
 ```
 
-## Current Implementation Status
-
-### Safe Alternatives Available
-
-| Throwing | Safe Alternative | Status |
-|----------|------------------|--------|
-| `first()` | `firstOr()` | ✅ |
-| `last()` | `lastOr()` | ✅ |
-| `at()` | N/A (returns `undefined`) | ✅ |
-| `find()` | N/A (returns `undefined`) | ✅ |
-| `single()` | - | ❌ Missing `singleOr` |
-| `min()` | - | ⚠️ No safe alt (throws on empty) |
-| `max()` | - | ⚠️ No safe alt (throws on empty) |
-| `average()` | - | ⚠️ No safe alt (throws on empty) |
-
-### Potential Additions
+### 3. Optional Return Types Are Explicit
 
 ```typescript
-// Could add these safe alternatives:
-singleOr(defaultValue, arr)     // → default if 0 or >1 elements
-minOr(defaultValue, arr)        // → default if empty
-maxOr(defaultValue, arr)        // → default if empty
-averageOr(defaultValue, arr)    // → default if empty
+// Type signature clearly shows possibility of undefined
+function first<T>(arr: readonly T[]): T | undefined;
+function min(arr: readonly number[]): number | undefined;
 ```
 
-## Consistency Checklist
+## Summary
 
-- [x] Transformation functions return `[]` for invalid inputs
-- [x] Accessor functions `first`/`last` have safe (`*Or`) versions
-- [ ] `single` needs `singleOr` alternative
-- [ ] Consider `minOr`/`maxOr`/`averageOr` for empty-safe aggregations
-- [x] Direct calls avoid function creation overhead
-- [x] Curried versions pre-compute constants
-- [x] No exceptions in transformation hot paths
+| Principle | Implementation |
+|-----------|----------------|
+| Never throw | All functions return safe values |
+| Transformations → `[]` | Empty array for invalid/empty inputs |
+| Accessors → `undefined` | Undefined for missing elements |
+| Aggregations → `undefined` | Undefined for empty sequences |
+| Fast paths | Direct calls avoid function creation |
+| Pre-compute | Curried versions pre-compute constants |
+| Type safety | Return types reflect all outcomes |

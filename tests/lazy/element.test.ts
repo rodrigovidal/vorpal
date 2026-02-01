@@ -10,30 +10,12 @@ describe('first', () => {
     expect(V([1, 2, 3, 4, 5]).first(x => x > 3)).toBe(4);
   });
 
-  test('throws on empty sequence', () => {
-    expect(() => V([]).first()).toThrow('Sequence contains no elements');
+  test('returns undefined on empty sequence', () => {
+    expect(V([]).first()).toBeUndefined();
   });
 
-  test('throws when no element matches predicate', () => {
-    expect(() => V([1, 2, 3]).first(x => x > 10)).toThrow('Sequence contains no matching element');
-  });
-});
-
-describe('firstOr', () => {
-  test('returns first element', () => {
-    expect(V([1, 2, 3]).firstOr(0)).toBe(1);
-  });
-
-  test('returns first matching element', () => {
-    expect(V([1, 2, 3, 4, 5]).firstOr(0, x => x > 3)).toBe(4);
-  });
-
-  test('returns default for empty sequence', () => {
-    expect(V([]).firstOr(42)).toBe(42);
-  });
-
-  test('returns default when no element matches', () => {
-    expect(V([1, 2, 3]).firstOr(99, x => x > 10)).toBe(99);
+  test('returns undefined when no element matches predicate', () => {
+    expect(V([1, 2, 3]).first(x => x > 10)).toBeUndefined();
   });
 });
 
@@ -46,22 +28,12 @@ describe('last', () => {
     expect(V([1, 2, 3, 4, 5]).last(x => x < 4)).toBe(3);
   });
 
-  test('throws on empty sequence', () => {
-    expect(() => V([]).last()).toThrow('Sequence contains no elements');
-  });
-});
-
-describe('lastOr', () => {
-  test('returns last element', () => {
-    expect(V([1, 2, 3]).lastOr(0)).toBe(3);
+  test('returns undefined on empty sequence', () => {
+    expect(V([]).last()).toBeUndefined();
   });
 
-  test('returns default for empty sequence', () => {
-    expect(V([]).lastOr(42)).toBe(42);
-  });
-
-  test('returns last matching element', () => {
-    expect(V([1, 2, 3, 4, 5]).lastOr(0, x => x < 4)).toBe(3);
+  test('returns undefined when no element matches predicate', () => {
+    expect(V([1, 2, 3]).last(x => x > 10)).toBeUndefined();
   });
 });
 
@@ -74,16 +46,16 @@ describe('single', () => {
     expect(V([1, 2, 3]).single(x => x === 2)).toBe(2);
   });
 
-  test('throws on empty sequence', () => {
-    expect(() => V([]).single()).toThrow('Sequence contains no elements');
+  test('returns undefined on empty sequence', () => {
+    expect(V([]).single()).toBeUndefined();
   });
 
-  test('throws when more than one element', () => {
-    expect(() => V([1, 2]).single()).toThrow('Sequence contains more than one element');
+  test('returns undefined when more than one element', () => {
+    expect(V([1, 2]).single()).toBeUndefined();
   });
 
-  test('throws when more than one match', () => {
-    expect(() => V([1, 2, 2, 3]).single(x => x === 2)).toThrow('Sequence contains more than one matching element');
+  test('returns undefined when more than one match', () => {
+    expect(V([1, 2, 2, 3]).single(x => x === 2)).toBeUndefined();
   });
 });
 
@@ -96,12 +68,12 @@ describe('at', () => {
     expect(V([10, 20, 30]).at(0)).toBe(10);
   });
 
-  test('throws for negative index', () => {
-    expect(() => V([1, 2, 3]).at(-1)).toThrow('Index out of range');
+  test('returns undefined for negative index', () => {
+    expect(V([1, 2, 3]).at(-1)).toBeUndefined();
   });
 
-  test('throws for index beyond length', () => {
-    expect(() => V([1, 2, 3]).at(5)).toThrow('Index out of range');
+  test('returns undefined for index beyond length', () => {
+    expect(V([1, 2, 3]).at(5)).toBeUndefined();
   });
 });
 

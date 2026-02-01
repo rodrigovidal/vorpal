@@ -70,9 +70,7 @@ export const V = {
 
   // Element Access
   first: fns.first,
-  firstOr: fns.firstOr,
   last: fns.last,
-  lastOr: fns.lastOr,
   at: fns.at,
   tail: fns.tail,
   init: fns.init,
@@ -240,9 +238,7 @@ export {
 
   // Element Access
   first,
-  firstOr,
   last,
-  lastOr,
   at,
   tail,
   init,

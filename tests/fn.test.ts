@@ -124,8 +124,8 @@ describe('first / last', () => {
     expect(V.first((x: number) => x > 2)([1, 2, 3, 4])).toBe(3);
   });
 
-  it('should throw on empty array', () => {
-    expect(() => V.first([])).toThrow();
+  it('should return undefined on empty array', () => {
+    expect(V.first([])).toBeUndefined();
   });
 
   it('should get last element', () => {
@@ -136,14 +136,8 @@ describe('first / last', () => {
     expect(V.last((x: number) => x < 3, [1, 2, 3, 4])).toBe(2);
   });
 
-  it('should use default value with firstOr', () => {
-    expect(V.firstOr(0)([])).toBe(0);
-    expect(V.firstOr(0)([1, 2])).toBe(1);
-  });
-
-  it('should use default value with lastOr', () => {
-    expect(V.lastOr(0)([])).toBe(0);
-    expect(V.lastOr(0)([1, 2])).toBe(2);
+  it('should return undefined on empty array for last', () => {
+    expect(V.last([])).toBeUndefined();
   });
 });
 

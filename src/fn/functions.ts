@@ -536,113 +536,59 @@ export function slice<T>(start: number, endOrArr?: number | readonly T[], arr?: 
  * first((x: number) => x > 2)([1, 2, 3, 4]); // 3
  * ```
  */
-export function first<T>(arr: readonly T[]): T;
-export function first<T>(predicate: Predicate<T>): (arr: readonly T[]) => T;
-export function first<T>(predicate: Predicate<T>, arr: readonly T[]): T;
+export function first<T>(arr: readonly T[]): T | undefined;
+export function first<T>(predicate: Predicate<T>): (arr: readonly T[]) => T | undefined;
+export function first<T>(predicate: Predicate<T>, arr: readonly T[]): T | undefined;
 export function first<T>(arrOrPred: readonly T[] | Predicate<T>, arr?: readonly T[]) {
   if (Array.isArray(arrOrPred)) {
-    if (arrOrPred.length === 0) throw new Error('Sequence contains no elements');
     return arrOrPred[0];
   }
   const predicate = arrOrPred as Predicate<T>;
-  const exec = (arr: readonly T[]): T => {
+  if (arr !== undefined) {
     for (let i = 0; i < arr.length; i++) {
       if (predicate(arr[i] as T, i)) return arr[i] as T;
     }
-    throw new Error('Sequence contains no matching element');
-  };
-  return arr === undefined ? exec : exec(arr);
-}
-
-/**
- * Gets the first element or a default value.
- * @example
- * ```ts
- * firstOr(0)([]);  // 0
- * firstOr(0)([1, 2, 3]); // 1
- * firstOr(0, (x: number) => x > 5)([1, 2, 3]); // 0
- * ```
- */
-export function firstOr<T>(defaultValue: T): (arr: readonly T[]) => T;
-export function firstOr<T>(defaultValue: T, predicate: Predicate<T>): (arr: readonly T[]) => T;
-export function firstOr<T>(defaultValue: T, predicate: Predicate<T>, arr: readonly T[]): T;
-export function firstOr<T>(defaultValue: T, predicateOrArr?: Predicate<T> | readonly T[], arr?: readonly T[]) {
-  if (predicateOrArr === undefined) {
-    return (arr: readonly T[]): T => arr.length === 0 ? defaultValue : arr[0] as T;
+    return undefined;
   }
-  if (Array.isArray(predicateOrArr)) {
-    return predicateOrArr.length === 0 ? defaultValue : predicateOrArr[0] as T;
-  }
-  const predicate = predicateOrArr as Predicate<T>;
-  const exec = (arr: readonly T[]): T => {
+  return (arr: readonly T[]): T | undefined => {
     for (let i = 0; i < arr.length; i++) {
       if (predicate(arr[i] as T, i)) return arr[i] as T;
     }
-    return defaultValue;
+    return undefined;
   };
-  return arr === undefined ? exec : exec(arr);
 }
 
 /**
- * Gets the last element.
+ * Gets the last element, or undefined if empty.
  * @example
  * ```ts
  * last([1, 2, 3]); // 3
+ * last([]); // undefined
+ * last(x => x > 1, [1, 2, 3]); // 3
  * ```
  */
-export function last<T>(arr: readonly T[]): T;
-export function last<T>(predicate: Predicate<T>): (arr: readonly T[]) => T;
-export function last<T>(predicate: Predicate<T>, arr: readonly T[]): T;
+export function last<T>(arr: readonly T[]): T | undefined;
+export function last<T>(predicate: Predicate<T>): (arr: readonly T[]) => T | undefined;
+export function last<T>(predicate: Predicate<T>, arr: readonly T[]): T | undefined;
 export function last<T>(arrOrPred: readonly T[] | Predicate<T>, arr?: readonly T[]) {
   // Fast path: check length property (faster than Array.isArray)
   if (typeof (arrOrPred as readonly T[]).length === 'number' && typeof arrOrPred !== 'function') {
     const a = arrOrPred as readonly T[];
-    if (a.length === 0) throw new Error('Sequence contains no elements');
-    return a[a.length - 1]!;
+    return a[a.length - 1];
   }
   const predicate = arrOrPred as Predicate<T>;
   if (arr !== undefined) {
-    // Direct execution with predicate
     for (let i = arr.length - 1; i >= 0; i--) {
       if (predicate(arr[i]!, i)) return arr[i]!;
     }
-    throw new Error('Sequence contains no matching element');
+    return undefined;
   }
-  // Curried path
-  return (arr: readonly T[]): T => {
+  return (arr: readonly T[]): T | undefined => {
     for (let i = arr.length - 1; i >= 0; i--) {
       if (predicate(arr[i]!, i)) return arr[i]!;
     }
-    throw new Error('Sequence contains no matching element');
+    return undefined;
   };
-}
-
-/**
- * Gets the last element or a default value.
- * @example
- * ```ts
- * lastOr(0)([]); // 0
- * lastOr(0)([1, 2, 3]); // 3
- * ```
- */
-export function lastOr<T>(defaultValue: T): (arr: readonly T[]) => T;
-export function lastOr<T>(defaultValue: T, predicate: Predicate<T>): (arr: readonly T[]) => T;
-export function lastOr<T>(defaultValue: T, predicate: Predicate<T>, arr: readonly T[]): T;
-export function lastOr<T>(defaultValue: T, predicateOrArr?: Predicate<T> | readonly T[], arr?: readonly T[]) {
-  if (predicateOrArr === undefined) {
-    return (arr: readonly T[]): T => arr.length === 0 ? defaultValue : arr[arr.length - 1] as T;
-  }
-  if (Array.isArray(predicateOrArr)) {
-    return predicateOrArr.length === 0 ? defaultValue : predicateOrArr[predicateOrArr.length - 1] as T;
-  }
-  const predicate = predicateOrArr as Predicate<T>;
-  const exec = (arr: readonly T[]): T => {
-    for (let i = arr.length - 1; i >= 0; i--) {
-      if (predicate(arr[i] as T, i)) return arr[i] as T;
-    }
-    return defaultValue;
-  };
-  return arr === undefined ? exec : exec(arr);
 }
 
 /**
@@ -931,19 +877,20 @@ export function sum<T>(arrOrSelector: readonly number[] | Selector<T, number>, a
 }
 
 /**
- * Averages numeric array or selected values.
+ * Averages numeric array or selected values. Returns undefined for empty arrays.
  * @example
  * ```ts
  * average([1, 2, 3]); // 2
+ * average([]); // undefined
  * average((x: {v: number}) => x.v)([{v: 1}, {v: 2}, {v: 3}]); // 2
  * ```
  */
-export function average(arr: readonly number[]): number;
-export function average<T>(selector: Selector<T, number>): (arr: readonly T[]) => number;
-export function average<T>(selector: Selector<T, number>, arr: readonly T[]): number;
+export function average(arr: readonly number[]): number | undefined;
+export function average<T>(selector: Selector<T, number>): (arr: readonly T[]) => number | undefined;
+export function average<T>(selector: Selector<T, number>, arr: readonly T[]): number | undefined;
 export function average<T>(arrOrSelector: readonly number[] | Selector<T, number>, arr?: readonly T[]) {
   if (Array.isArray(arrOrSelector)) {
-    if (arrOrSelector.length === 0) throw new Error('Sequence contains no elements');
+    if (arrOrSelector.length === 0) return undefined;
     let total = 0;
     for (let i = 0; i < arrOrSelector.length; i++) {
       total += arrOrSelector[i]!;
@@ -951,8 +898,8 @@ export function average<T>(arrOrSelector: readonly number[] | Selector<T, number
     return total / arrOrSelector.length;
   }
   const selector = arrOrSelector as Selector<T, number>;
-  const exec = (arr: readonly T[]): number => {
-    if (arr.length === 0) throw new Error('Sequence contains no elements');
+  const exec = (arr: readonly T[]): number | undefined => {
+    if (arr.length === 0) return undefined;
     let total = 0;
     for (let i = 0; i < arr.length; i++) {
       total += selector(arr[i] as T, i);
@@ -963,19 +910,20 @@ export function average<T>(arrOrSelector: readonly number[] | Selector<T, number
 }
 
 /**
- * Gets minimum value.
+ * Gets minimum value. Returns undefined for empty arrays.
  * @example
  * ```ts
  * min([3, 1, 2]); // 1
+ * min([]); // undefined
  * min((x: {v: number}) => x.v)([{v: 3}, {v: 1}]); // 1
  * ```
  */
-export function min(arr: readonly number[]): number;
-export function min<T>(selector: Selector<T, number>): (arr: readonly T[]) => number;
-export function min<T>(selector: Selector<T, number>, arr: readonly T[]): number;
+export function min(arr: readonly number[]): number | undefined;
+export function min<T>(selector: Selector<T, number>): (arr: readonly T[]) => number | undefined;
+export function min<T>(selector: Selector<T, number>, arr: readonly T[]): number | undefined;
 export function min<T>(arrOrSelector: readonly number[] | Selector<T, number>, arr?: readonly T[]) {
   if (Array.isArray(arrOrSelector)) {
-    if (arrOrSelector.length === 0) throw new Error('Sequence contains no elements');
+    if (arrOrSelector.length === 0) return undefined;
     let m = arrOrSelector[0]!;
     for (let i = 1; i < arrOrSelector.length; i++) {
       if (arrOrSelector[i]! < m) m = arrOrSelector[i]!;
@@ -983,8 +931,8 @@ export function min<T>(arrOrSelector: readonly number[] | Selector<T, number>, a
     return m;
   }
   const selector = arrOrSelector as Selector<T, number>;
-  const exec = (arr: readonly T[]): number => {
-    if (arr.length === 0) throw new Error('Sequence contains no elements');
+  const exec = (arr: readonly T[]): number | undefined => {
+    if (arr.length === 0) return undefined;
     let m = selector(arr[0] as T, 0);
     for (let i = 1; i < arr.length; i++) {
       const v = selector(arr[i] as T, i);
@@ -996,19 +944,20 @@ export function min<T>(arrOrSelector: readonly number[] | Selector<T, number>, a
 }
 
 /**
- * Gets maximum value.
+ * Gets maximum value. Returns undefined for empty arrays.
  * @example
  * ```ts
  * max([1, 3, 2]); // 3
+ * max([]); // undefined
  * max((x: {v: number}) => x.v)([{v: 1}, {v: 3}]); // 3
  * ```
  */
-export function max(arr: readonly number[]): number;
-export function max<T>(selector: Selector<T, number>): (arr: readonly T[]) => number;
-export function max<T>(selector: Selector<T, number>, arr: readonly T[]): number;
+export function max(arr: readonly number[]): number | undefined;
+export function max<T>(selector: Selector<T, number>): (arr: readonly T[]) => number | undefined;
+export function max<T>(selector: Selector<T, number>, arr: readonly T[]): number | undefined;
 export function max<T>(arrOrSelector: readonly number[] | Selector<T, number>, arr?: readonly T[]) {
   if (Array.isArray(arrOrSelector)) {
-    if (arrOrSelector.length === 0) throw new Error('Sequence contains no elements');
+    if (arrOrSelector.length === 0) return undefined;
     let m = arrOrSelector[0]!;
     for (let i = 1; i < arrOrSelector.length; i++) {
       if (arrOrSelector[i]! > m) m = arrOrSelector[i]!;
@@ -1016,8 +965,8 @@ export function max<T>(arrOrSelector: readonly number[] | Selector<T, number>, a
     return m;
   }
   const selector = arrOrSelector as Selector<T, number>;
-  const exec = (arr: readonly T[]): number => {
-    if (arr.length === 0) throw new Error('Sequence contains no elements');
+  const exec = (arr: readonly T[]): number | undefined => {
+    if (arr.length === 0) return undefined;
     let m = selector(arr[0] as T, 0);
     for (let i = 1; i < arr.length; i++) {
       const v = selector(arr[i] as T, i);
@@ -1029,17 +978,18 @@ export function max<T>(arrOrSelector: readonly number[] | Selector<T, number>, a
 }
 
 /**
- * Gets element with minimum value by selector.
+ * Gets element with minimum value by selector. Returns undefined for empty arrays.
  * @example
  * ```ts
  * minBy((x: {v: number}) => x.v)([{v: 3}, {v: 1}]); // {v: 1}
+ * minBy((x: {v: number}) => x.v)([]); // undefined
  * ```
  */
-export function minBy<T>(selector: Selector<T, number>): (arr: readonly T[]) => T;
-export function minBy<T>(selector: Selector<T, number>, arr: readonly T[]): T;
+export function minBy<T>(selector: Selector<T, number>): (arr: readonly T[]) => T | undefined;
+export function minBy<T>(selector: Selector<T, number>, arr: readonly T[]): T | undefined;
 export function minBy<T>(selector: Selector<T, number>, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): T => {
-    if (arr.length === 0) throw new Error('Sequence contains no elements');
+  const exec = (arr: readonly T[]): T | undefined => {
+    if (arr.length === 0) return undefined;
     let minItem = arr[0] as T;
     let minVal = selector(minItem, 0);
     for (let i = 1; i < arr.length; i++) {
@@ -1055,17 +1005,18 @@ export function minBy<T>(selector: Selector<T, number>, arr?: readonly T[]) {
 }
 
 /**
- * Gets element with maximum value by selector.
+ * Gets element with maximum value by selector. Returns undefined for empty arrays.
  * @example
  * ```ts
  * maxBy((x: {v: number}) => x.v)([{v: 1}, {v: 3}]); // {v: 3}
+ * maxBy((x: {v: number}) => x.v)([]); // undefined
  * ```
  */
-export function maxBy<T>(selector: Selector<T, number>): (arr: readonly T[]) => T;
-export function maxBy<T>(selector: Selector<T, number>, arr: readonly T[]): T;
+export function maxBy<T>(selector: Selector<T, number>): (arr: readonly T[]) => T | undefined;
+export function maxBy<T>(selector: Selector<T, number>, arr: readonly T[]): T | undefined;
 export function maxBy<T>(selector: Selector<T, number>, arr?: readonly T[]) {
-  const exec = (arr: readonly T[]): T => {
-    if (arr.length === 0) throw new Error('Sequence contains no elements');
+  const exec = (arr: readonly T[]): T | undefined => {
+    if (arr.length === 0) return undefined;
     let maxItem = arr[0] as T;
     let maxVal = selector(maxItem, 0);
     for (let i = 1; i < arr.length; i++) {
@@ -3427,37 +3378,33 @@ export function findLastIndex<T>(predicate: Predicate<T>, arr?: readonly T[]) {
 }
 
 /**
- * Returns the only element if array has exactly one, otherwise throws.
+ * Returns the only element if array has exactly one, otherwise undefined.
  * @example
  * ```ts
  * single([42]); // 42
- * single([]); // throws Error
- * single([1, 2]); // throws Error
+ * single([]); // undefined
+ * single([1, 2]); // undefined (more than one)
  * ```
  */
-export function single<T>(arr: readonly T[]): T;
-export function single<T>(predicate: Predicate<T>): (arr: readonly T[]) => T;
-export function single<T>(predicate: Predicate<T>, arr: readonly T[]): T;
+export function single<T>(arr: readonly T[]): T | undefined;
+export function single<T>(predicate: Predicate<T>): (arr: readonly T[]) => T | undefined;
+export function single<T>(predicate: Predicate<T>, arr: readonly T[]): T | undefined;
 export function single<T>(arrOrPred: readonly T[] | Predicate<T>, arr?: readonly T[]) {
   if (Array.isArray(arrOrPred)) {
-    if (arrOrPred.length !== 1) {
-      throw new Error(arrOrPred.length === 0 ? 'Sequence contains no elements' : 'Sequence contains more than one element');
-    }
-    return arrOrPred[0];
+    return arrOrPred.length === 1 ? arrOrPred[0] : undefined;
   }
   const predicate = arrOrPred as Predicate<T>;
-  const exec = (arr: readonly T[]): T => {
+  const exec = (arr: readonly T[]): T | undefined => {
     let found: T | undefined;
     let count = 0;
     for (let i = 0; i < arr.length; i++) {
       if (predicate(arr[i] as T, i)) {
         found = arr[i] as T;
         count++;
-        if (count > 1) throw new Error('Sequence contains more than one matching element');
+        if (count > 1) return undefined;
       }
     }
-    if (count === 0) throw new Error('Sequence contains no matching element');
-    return found!;
+    return count === 1 ? found : undefined;
   };
   return arr === undefined ? exec : exec(arr);
 }

@@ -372,12 +372,12 @@ describe('V.fn Additional Search Operations', () => {
       expect(single([42])).toBe(42);
     });
 
-    it('should throw for empty array', () => {
-      expect(() => single([])).toThrow('Sequence contains no elements');
+    it('should return undefined for empty array', () => {
+      expect(single([])).toBeUndefined();
     });
 
-    it('should throw for multiple elements', () => {
-      expect(() => single([1, 2])).toThrow('Sequence contains more than one element');
+    it('should return undefined for multiple elements', () => {
+      expect(single([1, 2])).toBeUndefined();
     });
 
     it('should work with predicate (curried)', () => {
@@ -388,8 +388,12 @@ describe('V.fn Additional Search Operations', () => {
       expect(single((x: number) => x > 2, [1, 2, 3])).toBe(3);
     });
 
-    it('should throw if multiple match predicate', () => {
-      expect(() => single((x: number) => x > 1, [1, 2, 3])).toThrow('Sequence contains more than one matching element');
+    it('should return undefined if multiple match predicate', () => {
+      expect(single((x: number) => x > 1, [1, 2, 3])).toBeUndefined();
+    });
+
+    it('should return undefined if no element matches predicate', () => {
+      expect(single((x: number) => x > 10, [1, 2, 3])).toBeUndefined();
     });
   });
 });

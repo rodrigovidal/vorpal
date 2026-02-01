@@ -1095,8 +1095,9 @@ export class VorpalLazy<T> implements Iterable<T> {
 
   /**
    * Calculates average of numeric values, optionally with a selector.
+   * Returns undefined for empty sequences.
    */
-  average(selector?: Selector<T, number>): number {
+  average(selector?: Selector<T, number>): number | undefined {
     const source = this[SOURCE];
     const ops = this[OPS];
 
@@ -1104,7 +1105,7 @@ export class VorpalLazy<T> implements Iterable<T> {
     if (Array.isArray(source)) {
       const arr = ops.length === 0 ? source : this.executeArrayPipeline(source, ops);
       const len = arr.length;
-      if (len === 0) return NaN;
+      if (len === 0) return undefined;
       let sum = 0;
       if (selector) {
         for (let i = 0; i < len; i++) {
@@ -1126,7 +1127,7 @@ export class VorpalLazy<T> implements Iterable<T> {
       sum += selector ? selector(item, index++) : (item as unknown as number);
       count++;
     }
-    return count === 0 ? NaN : sum / count;
+    return count === 0 ? undefined : sum / count;
   }
 
   /**
@@ -1237,32 +1238,27 @@ export class VorpalLazy<T> implements Iterable<T> {
 
   /**
    * Returns the first element, optionally matching a predicate.
-   * @throws Error if sequence is empty or no element matches
+   * Returns undefined if sequence is empty or no element matches.
    */
-  first(predicate?: Predicate<T>): T {
+  first(predicate?: Predicate<T>): T | undefined {
     const source = this[SOURCE];
     const ops = this[OPS];
 
     // Fast path: array source with no ops - direct indexed access
     if (Array.isArray(source) && ops.length === 0) {
       if (!predicate) {
-        if (source.length === 0) throw new Error('Sequence contains no elements');
-        return source[0] as T;
+        return source[0];
       }
       // Indexed loop for predicate search
       for (let i = 0; i < source.length; i++) {
         if (predicate(source[i] as T, i)) return source[i] as T;
       }
-      throw new Error('Sequence contains no matching element');
+      return undefined;
     }
 
     // Fast path: array source with ops - execute pipeline then search
     if (Array.isArray(source)) {
-      // For find operations, we need to short-circuit
-      // Execute ops but we can optimize by checking as we go
-      const arr = this.executeArrayPipelineWithEarlyExit(source, ops, predicate);
-      if (arr !== undefined) return arr;
-      throw new Error(predicate ? 'Sequence contains no matching element' : 'Sequence contains no elements');
+      return this.executeArrayPipelineWithEarlyExit(source, ops, predicate);
     }
 
     // Fallback for non-array sources
@@ -1272,42 +1268,7 @@ export class VorpalLazy<T> implements Iterable<T> {
         return item;
       }
     }
-    throw new Error(predicate ? 'Sequence contains no matching element' : 'Sequence contains no elements');
-  }
-
-  /**
-   * Returns the first element or a default value.
-   */
-  firstOr(defaultValue: T, predicate?: Predicate<T>): T {
-    const source = this[SOURCE];
-    const ops = this[OPS];
-
-    // Fast path: array source with no ops - direct indexed access
-    if (Array.isArray(source) && ops.length === 0) {
-      if (!predicate) {
-        return source.length > 0 ? source[0] as T : defaultValue;
-      }
-      // Indexed loop for predicate search
-      for (let i = 0; i < source.length; i++) {
-        if (predicate(source[i] as T, i)) return source[i] as T;
-      }
-      return defaultValue;
-    }
-
-    // Fast path: array source with ops
-    if (Array.isArray(source)) {
-      const arr = this.executeArrayPipelineWithEarlyExit(source, ops, predicate);
-      return arr !== undefined ? arr : defaultValue;
-    }
-
-    // Fallback for non-array sources
-    let index = 0;
-    for (const item of this) {
-      if (!predicate || predicate(item, index++)) {
-        return item;
-      }
-    }
-    return defaultValue;
+    return undefined;
   }
 
   /**
@@ -1397,17 +1358,15 @@ export class VorpalLazy<T> implements Iterable<T> {
 
   /**
    * Returns the last element, optionally matching a predicate.
-   * @throws Error if sequence is empty or no element matches
+   * Returns undefined if sequence is empty or no element matches.
    */
-  last(predicate?: Predicate<T>): T {
+  last(predicate?: Predicate<T>): T | undefined {
     const source = this[SOURCE];
     const pattern = this[PATTERN];
 
     // Fast path: array source with no ops and no predicate
     if (Array.isArray(source) && pattern === Pattern.None && !predicate) {
-      const len = source.length;
-      if (len === 0) throw new Error('Sequence contains no elements');
-      return source[len - 1] as T;
+      return source[source.length - 1];
     }
 
     // Fast path: array source with ops - process then get last
@@ -1417,38 +1376,17 @@ export class VorpalLazy<T> implements Iterable<T> {
         this.executeArrayPipeline(source, this.rebuildOps());
 
       if (!predicate) {
-        const len = arr.length;
-        if (len === 0) throw new Error('Sequence contains no elements');
-        return arr[len - 1] as T;
+        return arr[arr.length - 1];
       }
       // Search from end for predicate
       for (let i = arr.length - 1; i >= 0; i--) {
         if (predicate(arr[i] as T, i)) return arr[i] as T;
       }
-      throw new Error('Sequence contains no matching element');
+      return undefined;
     }
 
     // Fallback for non-array sources
     let last: T | undefined;
-    let found = false;
-    let index = 0;
-    for (const item of this) {
-      if (!predicate || predicate(item, index++)) {
-        last = item;
-        found = true;
-      }
-    }
-    if (!found) {
-      throw new Error(predicate ? 'Sequence contains no matching element' : 'Sequence contains no elements');
-    }
-    return last as T;
-  }
-
-  /**
-   * Returns the last element or a default value.
-   */
-  lastOr(defaultValue: T, predicate?: Predicate<T>): T {
-    let last: T = defaultValue;
     let index = 0;
     for (const item of this) {
       if (!predicate || predicate(item, index++)) {
@@ -1460,35 +1398,27 @@ export class VorpalLazy<T> implements Iterable<T> {
 
   /**
    * Returns the only element, optionally matching a predicate.
-   * @throws Error if sequence is empty or contains more than one element
+   * Returns undefined if sequence is empty or has more than one element.
    */
-  single(predicate?: Predicate<T>): T {
+  single(predicate?: Predicate<T>): T | undefined {
     let result: T | undefined;
-    let found = false;
+    let count = 0;
     let index = 0;
     for (const item of this) {
       if (!predicate || predicate(item, index++)) {
-        if (found) {
-          throw new Error(predicate ? 'Sequence contains more than one matching element' : 'Sequence contains more than one element');
-        }
+        if (count > 0) return undefined; // More than one
         result = item;
-        found = true;
+        count++;
       }
     }
-    if (!found) {
-      throw new Error(predicate ? 'Sequence contains no matching element' : 'Sequence contains no elements');
-    }
-    return result as T;
+    return count === 1 ? result : undefined;
   }
 
   /**
-   * Returns the element at the specified index.
-   * @throws Error if index is out of range
+   * Returns the element at the specified index, or undefined if out of range.
    */
-  at(index: number): T {
-    if (index < 0) {
-      throw new Error('Index out of range');
-    }
+  at(index: number): T | undefined {
+    if (index < 0) return undefined;
     let currentIndex = 0;
     for (const item of this) {
       if (currentIndex === index) {
@@ -1496,7 +1426,7 @@ export class VorpalLazy<T> implements Iterable<T> {
       }
       currentIndex++;
     }
-    throw new Error('Index out of range');
+    return undefined;
   }
 
   /**

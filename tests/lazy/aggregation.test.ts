@@ -40,8 +40,8 @@ describe('average', () => {
     expect(V(items).average(x => x.score)).toBe(90);
   });
 
-  test('returns NaN for empty sequence', () => {
-    expect(V([]).average()).toBeNaN();
+  test('returns undefined for empty sequence', () => {
+    expect(V([]).average()).toBeUndefined();
   });
 });
 

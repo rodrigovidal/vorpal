@@ -2861,16 +2861,14 @@ export interface PaginationResult<T> {
 export function page<T>(pageNum: number, pageSize: number): (arr: readonly T[]) => T[];
 export function page<T>(pageNum: number, pageSize: number, arr: readonly T[]): T[];
 export function page<T>(pageNum: number, pageSize: number, arr?: readonly T[]) {
-  // Fast path for direct 3-arg calls - avoid function creation
+  // Fast path: direct 3-arg call - single branch for invalid inputs
   if (arr !== undefined) {
-    if (pageNum < 1 || pageSize < 1) return [];
-    const start = (pageNum - 1) * pageSize;
-    return arr.slice(start, start + pageSize) as T[];
+    return pageNum > 0 && pageSize > 0 ? arr.slice((pageNum - 1) * pageSize, pageNum * pageSize) as T[] : [];
   }
-  // Pre-validate for curried version
+  // Curried version
   if (pageNum < 1 || pageSize < 1) return () => [] as T[];
   const start = (pageNum - 1) * pageSize;
-  const end = start + pageSize;
+  const end = pageNum * pageSize;
   return (arr: readonly T[]): T[] => arr.slice(start, end) as T[];
 }
 
@@ -2885,14 +2883,14 @@ export function page<T>(pageNum: number, pageSize: number, arr?: readonly T[]) {
 export function paginate<T>(pageNum: number, pageSize: number): (arr: readonly T[]) => PaginationResult<T>;
 export function paginate<T>(pageNum: number, pageSize: number, arr: readonly T[]): PaginationResult<T>;
 export function paginate<T>(pageNum: number, pageSize: number, arr?: readonly T[]) {
-  // Inline implementation for both paths to avoid function creation overhead
+  // Fast path: direct call - streamlined calculations
   if (arr !== undefined) {
     const total = arr.length;
-    const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
-    const validPage = Math.max(1, Math.min(pageNum, totalPages || 1));
+    const totalPages = ((total + pageSize - 1) / pageSize) | 0; // Fast ceil for positive integers
+    const validPage = pageNum < 1 ? 1 : pageNum > totalPages ? (totalPages || 1) : pageNum;
     const start = (validPage - 1) * pageSize;
     return {
-      items: pageSize > 0 ? arr.slice(start, start + pageSize) as T[] : [],
+      items: arr.slice(start, start + pageSize) as T[],
       page: validPage,
       pageSize,
       total,
@@ -2903,11 +2901,11 @@ export function paginate<T>(pageNum: number, pageSize: number, arr?: readonly T[
   }
   return (arr: readonly T[]): PaginationResult<T> => {
     const total = arr.length;
-    const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
-    const validPage = Math.max(1, Math.min(pageNum, totalPages || 1));
+    const totalPages = ((total + pageSize - 1) / pageSize) | 0;
+    const validPage = pageNum < 1 ? 1 : pageNum > totalPages ? (totalPages || 1) : pageNum;
     const start = (validPage - 1) * pageSize;
     return {
-      items: pageSize > 0 ? arr.slice(start, start + pageSize) as T[] : [],
+      items: arr.slice(start, start + pageSize) as T[],
       page: validPage,
       pageSize,
       total,
@@ -2953,13 +2951,12 @@ export function init<T>(arr: readonly T[]): T[] {
 export function takeLast<T>(n: number): (arr: readonly T[]) => T[];
 export function takeLast<T>(n: number, arr: readonly T[]): T[];
 export function takeLast<T>(n: number, arr?: readonly T[]) {
-  // Fast path for direct 2-arg calls
-  if (arr !== undefined) {
-    return n <= 0 ? [] : arr.slice(-n) as T[];
-  }
-  // Pre-validate for curried version
+  // Fast path: direct call - n <= 0 returns [] from slice(-0) = whole array, so we need the check
+  if (arr !== undefined) return n > 0 ? arr.slice(-n) as T[] : [];
+  // Curried version
   if (n <= 0) return () => [] as T[];
-  return (arr: readonly T[]): T[] => arr.slice(-n) as T[];
+  const neg = -n;
+  return (arr: readonly T[]): T[] => arr.slice(neg) as T[];
 }
 
 /**

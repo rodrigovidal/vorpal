@@ -149,7 +149,7 @@ export function fromMap<K, V>(map: Map<K, V>): VorpalLazy<[K, V]> {
  * @returns A plain object
  */
 export function fromPairs<V>(pairs: Iterable<[string | number, V]>): Record<string, V> {
-  const result = {} as Record<string, V>;
+  const result = Object.create(null) as Record<string, V>;
   for (const [key, value] of pairs) {
     result[String(key)] = value;
   }
@@ -163,7 +163,7 @@ export function fromPairs<V>(pairs: Iterable<[string | number, V]>): Record<stri
  * @returns A new object with transformed values
  */
 export function mapValues<T, R>(fn: (value: T, key: string) => R, obj: Record<string, T>): Record<string, R> {
-  const result = {} as Record<string, R>;
+  const result = Object.create(null) as Record<string, R>;
   for (const key of Object.keys(obj)) {
     result[key] = fn(obj[key]!, key);
   }
@@ -177,7 +177,7 @@ export function mapValues<T, R>(fn: (value: T, key: string) => R, obj: Record<st
  * @returns A new object with only matching entries
  */
 export function filterObj<T>(predicate: (value: T, key: string) => boolean, obj: Record<string, T>): Record<string, T> {
-  const result = {} as Record<string, T>;
+  const result = Object.create(null) as Record<string, T>;
   for (const key of Object.keys(obj)) {
     if (predicate(obj[key]!, key)) {
       result[key] = obj[key]!;
@@ -193,7 +193,7 @@ export function filterObj<T>(predicate: (value: T, key: string) => boolean, obj:
  * @returns A new object with only the specified keys
  */
 export function pick<T extends Record<string, unknown>, K extends keyof T>(pickKeys: K[], obj: T): Pick<T, K> {
-  const result = {} as Pick<T, K>;
+  const result = Object.create(null) as Pick<T, K>;
   for (const key of pickKeys) {
     if (key in obj) {
       result[key] = obj[key];
@@ -210,7 +210,7 @@ export function pick<T extends Record<string, unknown>, K extends keyof T>(pickK
  */
 export function omit<T extends Record<string, unknown>, K extends keyof T>(omitKeys: K[], obj: T): Omit<T, K> {
   const keySet = new Set(omitKeys as (keyof T)[]);
-  const result = {} as Omit<T, K>;
+  const result = Object.create(null) as Omit<T, K>;
   for (const key of Object.keys(obj) as (keyof T)[]) {
     if (!keySet.has(key)) {
       (result as Record<keyof T, unknown>)[key] = obj[key];
@@ -225,7 +225,7 @@ export function omit<T extends Record<string, unknown>, K extends keyof T>(omitK
  * @returns A new object with keys and values swapped
  */
 export function invert<T extends string | number>(obj: Record<string, T>): Record<string, string> {
-  const result = {} as Record<string, string>;
+  const result = Object.create(null) as Record<string, string>;
   for (const key of Object.keys(obj)) {
     result[String(obj[key])] = key;
   }

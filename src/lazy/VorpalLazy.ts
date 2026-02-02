@@ -1844,7 +1844,7 @@ export class VorpalLazy<T> implements Iterable<T> {
    * Counts occurrences by key function.
    */
   countBy<K extends string | number>(keySelector: KeySelector<T, K>): Record<K, number> {
-    const counts = {} as Record<K, number>;
+    const counts = Object.create(null) as Record<K, number>;
     for (const item of this) {
       const key = keySelector(item);
       counts[key] = (counts[key] || 0) + 1;
@@ -1856,7 +1856,7 @@ export class VorpalLazy<T> implements Iterable<T> {
    * Creates an object indexed by key function.
    */
   indexBy<K extends string | number>(keySelector: KeySelector<T, K>): Record<K, T> {
-    const result = {} as Record<K, T>;
+    const result = Object.create(null) as Record<K, T>;
     for (const item of this) {
       const key = keySelector(item);
       result[key] = item;
@@ -2092,7 +2092,7 @@ export class VorpalLazy<T> implements Iterable<T> {
    * Assumes T is [string | number, V].
    */
   fromPairs<V>(): Record<string, V> {
-    const result = {} as Record<string, V>;
+    const result = Object.create(null) as Record<string, V>;
     for (const item of this) {
       const [key, value] = item as unknown as [string | number, V];
       result[String(key)] = value;

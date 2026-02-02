@@ -1109,7 +1109,7 @@ export function groupBy<T, K extends string | number | symbol>(keyFn: (value: T)
 export function groupBy<T, K extends string | number | symbol>(keyFn: (value: T) => K, arr: readonly T[]): Record<K, T[]>;
 export function groupBy<T, K extends string | number | symbol>(keyFn: (value: T) => K, arr?: readonly T[]) {
   const exec = (arr: readonly T[]): Record<K, T[]> => {
-    const result = {} as Record<K, T[]>;
+    const result = Object.create(null) as Record<K, T[]>;
     for (let i = 0; i < arr.length; i++) {
       const key = keyFn(arr[i] as T);
       if (!result[key]) result[key] = [];
@@ -1159,7 +1159,7 @@ export function keyBy<T, K extends string | number | symbol>(keyFn: (value: T) =
 export function keyBy<T, K extends string | number | symbol>(keyFn: (value: T) => K, arr: readonly T[]): Record<K, T>;
 export function keyBy<T, K extends string | number | symbol>(keyFn: (value: T) => K, arr?: readonly T[]) {
   const exec = (arr: readonly T[]): Record<K, T> => {
-    const result = {} as Record<K, T>;
+    const result = Object.create(null) as Record<K, T>;
     for (let i = 0; i < arr.length; i++) {
       const key = keyFn(arr[i] as T);
       result[key] = arr[i] as T;

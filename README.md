@@ -62,25 +62,29 @@ All benchmarks run on Node.js with Vitest. Numbers are operations per second (hi
 
 #### Aggregation (ops/sec)
 
-| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
-|-----------|------|--------|-------------|-----------|-------|--------|--------|
-| sum | n=10k | 92,083 | **353,176** | 352,823 | 6,645 | 32,300 | Vorpal Lazy |
-| average | n=10k | 88,063 | **353,176** | - | 6,493 | 31,632 | Vorpal Lazy |
-| min | n=10k | 91,553 | **266,441** | - | 5,382 | 54,268 | Vorpal Lazy |
-| reduce | n=10k | 88,435 | 157,411 | **298,964** | 19,051 | 32,043 | Vorpal Fn |
-| count | n=10k | 14,021 | **126,894** | - | 15,802 | 10,497 | Vorpal Lazy |
+| Operation | Size | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
+|-----------|------|-------------|-----------|-------|--------|--------|
+| sum | n=10k | **353,176** | 352,823 | 6,645 | 32,300 | Vorpal Lazy |
+| average | n=10k | **353,176** | - | 6,493 | 31,632 | Vorpal Lazy |
+| min | n=10k | **266,441** | - | 5,382 | 54,268 | Vorpal Lazy |
+| reduce | n=10k | 157,411 | **298,964** | 19,051 | 32,043 | Vorpal Fn |
+| count | n=10k | **126,894** | - | 15,802 | 10,497 | Vorpal Lazy |
+
+Note: No native `sum`, `average`, `min`, `count` methods exist on arrays.
 
 #### Grouping & Set Operations (ops/sec)
 
-| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
-|-----------|------|--------|-------------|-----------|-------|--------|--------|
-| groupBy | n=10k | 23,438 | **26,051** | 22,074 | 7,193 | 15,973 | Vorpal Lazy |
-| distinct | n=10k | 42,984 | 42,643 | **57,336** | 24,096 | 41,012 | Vorpal Fn |
-| sortBy | n=10k | 615 | 687 | **756** | 700 | 515 | Vorpal Fn |
-| partition | n=10k | - | 42,895 | **44,166** | 8,005 | 13,216 | Vorpal Fn |
-| chunk | n=10k | - | **217,724** | 209,424 | 160,372 | 83,099 | Vorpal Lazy |
-| intersection | n=1k | 61,063 | - | 45,461 | 33,101 | - | Native |
-| difference | n=1k | 58,298 | - | **60,736** | 34,608 | - | Vorpal Fn |
+| Operation | Size | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
+|-----------|------|-------------|-----------|-------|--------|--------|
+| groupBy | n=10k | **26,051** | 22,074 | 7,193 | 15,973 | Vorpal Lazy |
+| distinct | n=10k | 42,643 | **57,336** | 24,096 | 41,012 | Vorpal Fn |
+| sortBy | n=10k | 687 | **756** | 700 | 515 | Vorpal Fn |
+| partition | n=10k | 42,895 | **44,166** | 8,005 | 13,216 | Vorpal Fn |
+| chunk | n=10k | **217,724** | 209,424 | 160,372 | 83,099 | Vorpal Lazy |
+| intersection | n=1k | - | **45,461** | 33,101 | - | Vorpal Fn |
+| difference | n=1k | - | **60,736** | 34,608 | - | Vorpal Fn |
+
+Note: None of these have native Array methods.
 
 #### Predicates (ops/sec)
 
@@ -95,16 +99,20 @@ All benchmarks run on Node.js with Vitest. Numbers are operations per second (hi
 | Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
 |-----------|------|--------|-------------|-----------|-------|--------|--------|
 | find (pos 500) | n=100k | **5,214,690** | 5,007,992 | 5,158,732 | 4,890,404 | - | Native |
-| first (>50k) | n=100k | 434,127 | **5,885,234** | 4,516,892 | 5,461,327 | 456,893 | Vorpal Lazy |
+| first (>50k) | n=100k | - | **5,885,234** | 4,516,892 | 5,461,327 | 456,893 | Vorpal Lazy |
+
+Note: `find` is native. `first` with predicate is not (similar to find but returns undefined vs throwing).
 
 #### Slice Operations (ops/sec)
 
 | Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
 |-----------|------|--------|-------------|-----------|-------|--------|--------|
-| take(100) | n=10k | **31,724,891** | 23,134,567 | 23,038,456 | 15,678,234 | 8,634,123 | Native |
-| skip(100) | n=10k | 3,287,456 | **3,512,478** | 3,478,234 | 2,984,567 | 408,234 | Vorpal Lazy |
-| last | n=10k | **843,234,567** | 602,456,789 | 745,678,234 | 823,456,123 | 249,123,456 | Native |
+| slice(0,100) | n=10k | **31,724,891** | 23,134,567 | 23,038,456 | 15,678,234 | 8,634,123 | Native |
+| slice(100) | n=10k | 3,287,456 | **3,512,478** | 3,478,234 | 2,984,567 | 408,234 | Vorpal Lazy |
+| at(-1) | n=10k | **843,234,567** | 602,456,789 | 745,678,234 | 823,456,123 | 249,123,456 | Native |
 | reverse | n=10k | 13,847 | 13,293 | **14,562** | 14,123 | 12,456 | Vorpal Fn |
+
+Note: `slice`, `at`, `reverse` are native. Vorpal's `take`/`skip` use slice internally.
 
 #### Combine Operations (ops/sec)
 
@@ -115,20 +123,20 @@ All benchmarks run on Node.js with Vitest. Numbers are operations per second (hi
 
 #### Join Operations (ops/sec)
 
-| Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Winner |
-|-----------|------|--------|-------------|-----------|-------|--------|
-| innerJoin | 100u/300o | 175,040 | 58,317 | **217,488** | 178,446 | Vorpal Fn |
-| innerJoin | 1ku/5ko | 6,596 | 3,232 | **7,070** | 213 | Vorpal Fn (33x vs Ramda) |
-| innerJoin | 10ku/50ko | 489 | 253 | **494** | 2 | Vorpal Fn (269x vs Ramda) |
-| leftJoin | 1ku/5ko | **12,992** | 3,480 | 9,049 | - | Native |
-| rightJoin | 1ku/5ko | - | 3,400 | **8,900** | - | Vorpal Fn |
-| fullJoin | 1ku/5ko | **9,953** | 2,856 | 8,039 | - | Native |
-| groupJoin | 1ku/5ko | **12,019** | 8,007 | 11,766 | - | Native |
-| crossJoin | 100x100 | 9,756 | 2,541 | **10,697** | 6,413 | Vorpal Fn (1.7x vs Ramda) |
-| semiJoin | 1ku/5ko | 14,463 | 15,338 | **28,614** | - | Vorpal Fn (2x vs Native) |
-| antiJoin | 1ku/5ko | 15,464 | 21,617 | **30,377** | - | Vorpal Fn (2x vs Native) |
+| Operation | Size | Vorpal Lazy | Vorpal Fn | Ramda | Winner |
+|-----------|------|-------------|-----------|-------|--------|
+| innerJoin | 100u/300o | 58,317 | **217,488** | 178,446 | Vorpal Fn |
+| innerJoin | 1ku/5ko | 3,232 | **7,070** | 213 | Vorpal Fn (33x vs Ramda) |
+| innerJoin | 10ku/50ko | 253 | **494** | 2 | Vorpal Fn (269x vs Ramda) |
+| leftJoin | 1ku/5ko | 3,480 | **9,049** | - | Vorpal Fn |
+| rightJoin | 1ku/5ko | 3,400 | **8,900** | - | Vorpal Fn |
+| fullJoin | 1ku/5ko | 2,856 | **8,039** | - | Vorpal Fn |
+| groupJoin | 1ku/5ko | 8,007 | **11,766** | - | Vorpal Fn |
+| crossJoin | 100x100 | 2,541 | **10,697** | 6,413 | Vorpal Fn (1.7x vs Ramda) |
+| semiJoin | 1ku/5ko | 15,338 | **28,614** | - | Vorpal Fn |
+| antiJoin | 1ku/5ko | 21,617 | **30,377** | - | Vorpal Fn |
 
-Note: Ramda's innerJoin uses O(n×m) comparison vs Vorpal's O(n+m) hash-based lookup, making Vorpal **33-269x faster** on larger datasets.
+Note: No native join operations exist. Ramda's innerJoin uses O(n×m) comparison vs Vorpal's O(n+m) hash-based lookup, making Vorpal **33-269x faster** on larger datasets.
 
 #### Complex Pipeline (ops/sec)
 
@@ -149,28 +157,27 @@ Note: Ramda's innerJoin uses O(n×m) comparison vs Vorpal's O(n+m) hash-based lo
 
 ### Summary by Operation
 
-| Operation | Best Library | vs 2nd Place | vs Native |
-|-----------|--------------|--------------|-----------|
-| filter+map (large) | **Vorpal Lazy** | 1.13x vs Lodash | 1.27x faster |
-| early termination | **Vorpal Lazy** | 1.72x vs Vorpal Fn | 10,271x faster |
-| sum/average/min | **Vorpal Lazy** | 1.00x vs Vorpal Fn | 3.8x faster |
-| reduce | **Vorpal Fn** | 1.90x vs Vorpal Lazy | 3.4x faster |
-| groupBy | **Vorpal Lazy** | 1.11x vs Native | 1.11x faster |
-| distinct | **Vorpal Fn** | 1.33x vs Native | 1.33x faster |
-| sortBy | **Vorpal Fn** | 1.08x vs Ramda | 1.23x faster |
-| partition | **Vorpal Fn** | 1.03x vs Vorpal Lazy | - |
-| chunk | **Vorpal Lazy** | 1.04x vs Vorpal Fn | - |
-| flatMap | **Vorpal Fn** | 1.04x vs Vorpal Lazy | 3.0x faster |
-| count | **Vorpal Lazy** | 8.0x vs Ramda | 9.1x faster |
-| some/every | **Vorpal Fn** | 1.05x vs Ramda | 3.6x faster |
-| find | **Native** | 1.01x vs Vorpal Fn | baseline |
-| take/last | **Native** | - | baseline |
-| skip | **Vorpal Lazy** | 1.01x vs Vorpal Fn | 1.07x faster |
-| reverse | **Vorpal Fn** | 1.03x vs Ramda | 1.05x faster |
-| innerJoin | **Vorpal Fn** | 1.07x vs Native | 33-269x vs Ramda |
-| leftJoin/fullJoin | **Native** | 1.24-1.44x vs Vorpal Fn | baseline |
-| semiJoin/antiJoin | **Vorpal Fn** | 1.4-1.9x vs Vorpal Lazy | 2x faster |
-| crossJoin | **Vorpal Fn** | 1.10x vs Native | 1.67x vs Ramda |
+| Operation | Best Library | vs 2nd Place |
+|-----------|--------------|--------------|
+| filter+map (large) | **Vorpal Lazy** | 1.13x vs Lodash |
+| early termination | **Vorpal Lazy** | 1.72x vs Vorpal Fn |
+| sum/average/min | **Vorpal Lazy** | 53x vs Ramda |
+| reduce | **Vorpal Fn** | 1.90x vs Vorpal Lazy |
+| groupBy | **Vorpal Lazy** | 1.18x vs Vorpal Fn |
+| distinct | **Vorpal Fn** | 1.35x vs Vorpal Lazy |
+| sortBy | **Vorpal Fn** | 1.08x vs Ramda |
+| partition | **Vorpal Fn** | 1.03x vs Vorpal Lazy |
+| chunk | **Vorpal Lazy** | 1.04x vs Vorpal Fn |
+| flatMap | **Vorpal Fn** | 1.04x vs Vorpal Lazy |
+| count | **Vorpal Lazy** | 8.0x vs Ramda |
+| some/every | **Vorpal Fn** | 1.05x vs Ramda |
+| includes | **Vorpal Fn** | 1.07x vs Ramda |
+| find | **Native** | 1.01x vs Vorpal Fn |
+| slice | **Native** | 1.37x vs Vorpal |
+| at(-1) | **Native** | 1.13x vs Ramda |
+| reverse | **Vorpal Fn** | 1.03x vs Ramda |
+| innerJoin | **Vorpal Fn** | 33-269x vs Ramda |
+| all joins | **Vorpal Fn** | 1.3-2x vs Vorpal Lazy |
 
 ### When to Use Each Library
 

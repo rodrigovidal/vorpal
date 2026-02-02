@@ -86,9 +86,9 @@ All benchmarks run on Node.js with Vitest. Numbers are operations per second (hi
 
 | Operation | Size | Native | Vorpal Lazy | Vorpal Fn | Ramda | Lodash | Winner |
 |-----------|------|--------|-------------|-----------|-------|--------|--------|
-| some | n=10k | 1,632,456 | 3,696,528 | 3,823,714 | **4,011,923** | 1,692,847 | Ramda |
-| every | n=10k | 1,172,984 | 3,687,642 | 3,614,837 | **3,913,458** | 976,432 | Ramda |
-| includes | n=10k | **3,832,156** | 3,547,893 | 3,612,478 | 3,748,291 | 1,789,234 | Native |
+| some | n=10k | 99,671 | 327,593 | **335,565** | 330,274 | 163,821 | Vorpal Fn |
+| every | n=10k | 85,157 | 288,891 | **310,760** | 296,734 | 84,379 | Vorpal Fn |
+| includes | n=10k | 1,314,157 | 1,280,080 | **1,381,199** | 1,292,671 | 556,172 | Vorpal Fn |
 
 #### Search Operations (ops/sec)
 
@@ -162,7 +162,7 @@ Note: Ramda's innerJoin uses O(n×m) comparison vs Vorpal's O(n+m) hash-based lo
 | chunk | **Vorpal Lazy** | 1.04x vs Vorpal Fn | - |
 | flatMap | **Vorpal Fn** | 1.04x vs Vorpal Lazy | 3.0x faster |
 | count | **Vorpal Lazy** | 8.0x vs Ramda | 9.1x faster |
-| some/every | **Ramda** | 1.05x vs Vorpal Fn | 2.5x faster |
+| some/every | **Vorpal Fn** | 1.05x vs Ramda | 3.6x faster |
 | find | **Native** | 1.01x vs Vorpal Fn | baseline |
 | take/last | **Native** | - | baseline |
 | skip | **Vorpal Lazy** | 1.01x vs Vorpal Fn | 1.07x faster |
@@ -191,7 +191,7 @@ Note: Ramda's innerJoin uses O(n×m) comparison vs Vorpal's O(n+m) hash-based lo
 
 ## API Reference
 
-### Lazy API (chainable) - 105 Methods
+### Lazy API (chainable) - 103 Methods
 
 ```typescript
 V(array)
@@ -235,13 +235,11 @@ V(array)
   .tail()                     // All but first
   .init()                     // All but last
 
-  // Element Access (8)
-  .first(predicate?)          // First element
-  .firstOr(default)           // First or default
-  .last(predicate?)           // Last element
-  .lastOr(default)            // Last or default
-  .single(predicate?)         // Single element or throw
-  .at(index)                  // Element at index
+  // Element Access (6)
+  .first(predicate?)          // First element or undefined
+  .last(predicate?)           // Last element or undefined
+  .single(predicate?)         // Single element or undefined
+  .at(index)                  // Element at index or undefined
   .findIndex(predicate)       // Index of first match
   .findLastIndex(predicate)   // Index of last match
 
@@ -261,10 +259,10 @@ V(array)
   // Aggregation (10)
   .count(predicate?)          // Count elements
   .countBy(keySelector)       // Count by group
-  .sum(selector?)             // Sum of values
-  .average(selector?)         // Average of values
-  .min(selector?)             // Minimum value
-  .max(selector?)             // Maximum value
+  .sum(selector?)             // Sum (0 for empty)
+  .average(selector?)         // Average or undefined
+  .min(selector?)             // Minimum or undefined
+  .max(selector?)             // Maximum or undefined
   .reduce(fn, initial)        // Reduce to single value
   .scan(fn, initial)          // Cumulative reduce
   .aggregateBy(key, seed, fn) // Group and aggregate
@@ -337,7 +335,7 @@ V(array)
   .fromPairs()                // Key-value pairs to object
 ```
 
-### Fn API (functional) - 120 Functions
+### Fn API (functional) - 118 Functions
 
 All functions support both direct and curried (data-last) execution:
 
@@ -384,13 +382,11 @@ V.slice(start, end?)          // Slice range
 V.tail(array)                 // All but first
 V.init(array)                 // All but last
 
-// Element Access (8)
-V.first(predicate?)           // First element
-V.firstOr(default, pred?)     // First or default
-V.last(predicate?)            // Last element
-V.lastOr(default, pred?)      // Last or default
-V.single(predicate?)          // Single or throw
-V.at(index)                   // Element at index
+// Element Access (4)
+V.first(predicate?)           // First element or undefined
+V.last(predicate?)            // Last element or undefined
+V.single(predicate?)          // Single element or undefined
+V.at(index)                   // Element at index or undefined
 
 // Search (5)
 V.find(predicate)             // Find element
@@ -408,12 +404,12 @@ V.isEmpty(array)              // Is empty
 
 // Aggregation (11)
 V.count(predicate?)           // Count elements
-V.sum(selector?)              // Sum of values
-V.average(selector?)          // Average of values
-V.min(selector?)              // Minimum value
-V.max(selector?)              // Maximum value
-V.minBy(selector)             // Element with min value
-V.maxBy(selector)             // Element with max value
+V.sum(selector?)              // Sum (0 for empty)
+V.average(selector?)          // Average or undefined
+V.min(selector?)              // Minimum or undefined
+V.max(selector?)              // Maximum or undefined
+V.minBy(selector)             // Element with min or undefined
+V.maxBy(selector)             // Element with max or undefined
 V.reduce(fn, initial)         // Reduce to single value
 V.reduceRight(fn, initial)    // Reduce from right
 V.scan(fn, initial)           // Cumulative reduce

@@ -705,36 +705,17 @@ export function lastIndexOf<T>(value: T, arr?: readonly T[]) {
 export function every<T>(predicate: Predicate<T>): (arr: readonly T[]) => boolean;
 export function every<T>(predicate: Predicate<T>, arr: readonly T[]): boolean;
 export function every<T>(predicate: Predicate<T>, arr?: readonly T[]) {
-  // Check if predicate uses index (length check for optimization)
-  const useIndex = predicate.length > 1;
   if (arr !== undefined) {
-    // Direct execution path - for loop matches V8's fast path
-    if (useIndex) {
-      for (let i = 0, len = arr.length; i < len; i++) {
-        if (!predicate(arr[i]!, i)) return false;
-      }
-    } else {
-      // Fast path: predicate doesn't use index
-      for (let i = 0, len = arr.length; i < len; i++) {
-        if (!(predicate as (value: T) => boolean)(arr[i]!)) return false;
-      }
+    const len = arr.length;
+    for (let i = 0; i < len; i++) {
+      if (!predicate(arr[i]!, i)) return false;
     }
     return true;
   }
-  // Curried path - create specialized closure
-  if (useIndex) {
-    return (arr: readonly T[]): boolean => {
-      for (let i = 0, len = arr.length; i < len; i++) {
-        if (!predicate(arr[i]!, i)) return false;
-      }
-      return true;
-    };
-  }
-  // Fast path: predicate doesn't use index
   return (arr: readonly T[]): boolean => {
-    const fn = predicate as (value: T) => boolean;
-    for (let i = 0, len = arr.length; i < len; i++) {
-      if (!fn(arr[i]!)) return false;
+    const len = arr.length;
+    for (let i = 0; i < len; i++) {
+      if (!predicate(arr[i]!, i)) return false;
     }
     return true;
   };
@@ -751,36 +732,17 @@ export function every<T>(predicate: Predicate<T>, arr?: readonly T[]) {
 export function some<T>(predicate: Predicate<T>): (arr: readonly T[]) => boolean;
 export function some<T>(predicate: Predicate<T>, arr: readonly T[]): boolean;
 export function some<T>(predicate: Predicate<T>, arr?: readonly T[]) {
-  // Check if predicate uses index (length check for optimization)
-  const useIndex = predicate.length > 1;
   if (arr !== undefined) {
-    // Direct execution path - for loop matches V8's fast path
-    if (useIndex) {
-      for (let i = 0, len = arr.length; i < len; i++) {
-        if (predicate(arr[i]!, i)) return true;
-      }
-    } else {
-      // Fast path: predicate doesn't use index
-      for (let i = 0, len = arr.length; i < len; i++) {
-        if ((predicate as (value: T) => boolean)(arr[i]!)) return true;
-      }
+    const len = arr.length;
+    for (let i = 0; i < len; i++) {
+      if (predicate(arr[i]!, i)) return true;
     }
     return false;
   }
-  // Curried path - create specialized closure
-  if (useIndex) {
-    return (arr: readonly T[]): boolean => {
-      for (let i = 0, len = arr.length; i < len; i++) {
-        if (predicate(arr[i]!, i)) return true;
-      }
-      return false;
-    };
-  }
-  // Fast path: predicate doesn't use index
   return (arr: readonly T[]): boolean => {
-    const fn = predicate as (value: T) => boolean;
-    for (let i = 0, len = arr.length; i < len; i++) {
-      if (fn(arr[i]!)) return true;
+    const len = arr.length;
+    for (let i = 0; i < len; i++) {
+      if (predicate(arr[i]!, i)) return true;
     }
     return false;
   };
@@ -798,11 +760,9 @@ export function includes<T>(value: T): (arr: readonly T[]) => boolean;
 export function includes<T>(value: T, arr: readonly T[]): boolean;
 export function includes<T>(value: T, arr?: readonly T[]) {
   if (arr !== undefined) {
-    // Direct execution path - native includes is fastest
-    return (arr as T[]).includes(value);
+    return arr.includes(value);
   }
-  // Curried path
-  return (arr: readonly T[]): boolean => (arr as T[]).includes(value);
+  return (arr: readonly T[]): boolean => arr.includes(value);
 }
 
 /**

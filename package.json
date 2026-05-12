@@ -48,7 +48,7 @@
     "lodash": "^4.17.23",
     "ramda": "^0.32.0",
     "typedoc": "^0.28.16",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.0.18"
   },
   "engines": {
